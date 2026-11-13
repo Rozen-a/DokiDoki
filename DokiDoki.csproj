@@ -16,5 +16,6 @@
   <ItemGroup>
     <ApplicationDefinition Include="Frontend/App.xaml" />
     <Resource Include="Frontend/Assets/Heart.png" />
+    <Resource Include="Frontend/Assets/ObsOverlay.html" />
   </ItemGroup>
 </Project>

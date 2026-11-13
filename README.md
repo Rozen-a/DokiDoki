@@ -29,6 +29,14 @@
 
 「爱心右置」与「心率右置」二选一。关闭悬浮窗时无法调整其他选项，关闭波动时无法调整曲线背景。悬浮窗整体透明。可以隐藏最近 60 秒的心率曲线，也可以单独关闭曲线的半透明背景。悬浮窗与主界面同步，断开时会清空读数。
 
+## OBS 直播采集
+
+1. 在「悬浮窗设置」勾选「开启直播采集」。
+2. 在同一台电脑的 OBS 中添加「浏览器」来源，URL 填写 `http://localhost:18765/`，浏览器源固定为 `960 × 720`（4:3），隐藏曲线时也用这一尺寸。需要调整画面大小时，在 OBS 场景中等比缩放来源。
+3. 需要只在 OBS 中显示时，勾选「仅直播采集，隐藏桌面悬浮窗」。
+
+浏览器源使用透明背景，与应用共享当前 BPM、爱心位置和最近 60 秒的心率曲线。关闭直播采集或退出 DokiDoki 会停止本机服务。
+
 ## 运行环境与验证状态
 
 - **目标环境**为 Windows 10 22H2 或 Windows 11（x64），电脑需支持 BLE。
@@ -76,7 +84,8 @@ DokiDoki/
 ├── Frontend/
 │   ├── Assets/
 │   │   ├── Heart.png              # 透明背景的像素爱心与窗口图标
-│   │   └── Heart.ico              # EXE 文件图标
+│   │   ├── Heart.ico              # EXE 文件图标
+│   │   └── ObsOverlay.html        # OBS 透明浏览器来源页面
 │   ├── App.xaml                   # WPF 应用配置和启动窗口
 │   ├── App.xaml.cs                # WPF 应用入口类
 │   ├── HeartRateWindow.xaml       # 设备列表、按钮、状态和 BPM 布局
@@ -88,7 +97,8 @@ DokiDoki/
 │   └── HeartRateTrend.cs          # 绘制主界面和悬浮窗的共享心率曲线
 ├── Backend/
 │   ├── BleHeartRateService.cs     # BLE 扫描、GATT 连接、订阅及资源释放
-│   └── BleMeasurement.cs          # WinRT 异步操作与心率测量数据解析
+│   ├── BleMeasurement.cs          # WinRT 异步操作与心率测量数据解析
+│   └── ObsCaptureServer.cs    # 本机 OBS 采集服务
 ├── bin/                          # 构建时生成
 │   ├── Debug/                    # VS Code 一键运行使用的调试输出
 │   │   └── net10.0-windows10.0.19041.0/

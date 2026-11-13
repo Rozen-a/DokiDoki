@@ -2,6 +2,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,6 +17,7 @@ namespace DokiDoki.Frontend;
 public sealed partial class HeartRateWindow : Window
 {
     private HeartRateOverlay overlay;
+    private ObsCaptureServer obsCapture;
     private OverlaySettingsWindow overlaySettings;
     private OverlayOptions overlayOptions = new();
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(500) };
@@ -41,6 +45,8 @@ public sealed partial class HeartRateWindow : Window
         Closed += (_, _) =>
         {
             toastTimer.Stop();
+            obsCapture?.Dispose();
+            obsCapture = null;
             overlay?.Close();
             Disconnect("已断开连接");
         };
@@ -199,6 +205,18 @@ public sealed partial class HeartRateWindow : Window
         chartHint.Text = connected ? "等待心率数据" : "连接后显示心率趋势";
         range.Text = HeartRateTrend.Draw(chart, history, now);
         overlay?.UpdateReading(reading.Text, history, now);
+        obsCapture?.Update(JsonSerializer.Serialize(new
+        {
+            bpm = reading.Text,
+            heartRight = overlayOptions.HeartRight,
+            showTrend = overlayOptions.ShowTrend,
+            showBackground = overlayOptions.ShowBackground,
+            points = history.Select(sample => new
+            {
+                bpm = sample.Bpm,
+                position = 1 - (now - sample.Time) / HeartRateTrend.HistorySeconds
+            })
+        }));
     }
 
     /// <summary>Opens or activates the independent floating-window settings.</summary>
@@ -221,10 +239,19 @@ public sealed partial class HeartRateWindow : Window
     /// <param name="options">The latest settings snapshot.</param>
     private void ApplyOverlayOptions(OverlayOptions options)
     {
+        if (options.Capture)
+            obsCapture ??= new ObsCaptureServer(ReadCaptureAsset("ObsOverlay.html"), ReadCaptureAsset("Heart.png"));
+        else
+        {
+            obsCapture?.Dispose();
+            obsCapture = null;
+        }
+
         overlayOptions = options;
-        if (!options.Enabled)
+        if (!options.Enabled || (options.Capture && options.CaptureOnly))
         {
             overlay?.Hide();
+            RenderTrend();
             return;
         }
 
@@ -238,6 +265,17 @@ public sealed partial class HeartRateWindow : Window
             options.ShowBackground, options.Locked);
         if (!overlay.IsVisible) overlay.Show();
         RenderTrend();
+    }
+
+    /// <summary>Reads a static resource for the local OBS browser page.</summary>
+    /// <param name="name">File name under Frontend/Assets.</param>
+    /// <returns>The asset bytes.</returns>
+    private static byte[] ReadCaptureAsset(string name)
+    {
+        using var stream = Application.GetResourceStream(new Uri("/Frontend/Assets/" + name, UriKind.Relative)).Stream;
+        using var bytes = new MemoryStream();
+        stream.CopyTo(bytes);
+        return bytes.ToArray();
     }
 
     /// <summary>Releases Bluetooth resources and clears the dashboard for the next session.</summary>
