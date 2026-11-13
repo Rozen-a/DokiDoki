@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "运行 DokiDoki",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "编译 DokiDoki",
+      "program": "${workspaceFolder}/bin/Debug/net10.0-windows10.0.19041.0/win-x64/HeartRate.exe",
+      "cwd": "${workspaceFolder}",
+      "console": "internalConsole"
+    }
+  ]
+}

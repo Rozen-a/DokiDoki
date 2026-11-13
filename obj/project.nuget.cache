@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "dgSpecHash": "3UT4/cCK9uY=",
+  "success": true,
+  "projectFilePath": "D:\\rozen_file\\Program\\DokiDoki\\DokiDoki-gh\\DokiDoki.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\rozen\\.nuget\\packages\\microsoft.net.illink.tasks\\10.0.15\\microsoft.net.illink.tasks.10.0.15.nupkg.sha512",
+    "C:\\Users\\rozen\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\10.0.15\\microsoft.netcore.app.runtime.win-x64.10.0.15.nupkg.sha512",
+    "C:\\Users\\rozen\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\10.0.15\\microsoft.windowsdesktop.app.runtime.win-x64.10.0.15.nupkg.sha512",
+    "C:\\Users\\rozen\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\10.0.15\\microsoft.aspnetcore.app.runtime.win-x64.10.0.15.nupkg.sha512",
+    "C:\\Users\\rozen\\.nuget\\packages\\microsoft.windows.sdk.net.ref\\10.0.19041.57\\microsoft.windows.sdk.net.ref.10.0.19041.57.nupkg.sha512"
+  ],
+  "logs": []
+}

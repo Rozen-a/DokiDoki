@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "编译 DokiDoki",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "$sdk = 'dotnet'; $installed = @(dotnet --list-sdks); if (-not ($installed -match '^10\\.0\\.')) { $localSdk = Join-Path $env:TEMP 'DokiDoki-sdk\\dotnet.exe'; if (-not (Test-Path -LiteralPath $localSdk)) { throw 'Install the .NET 10 SDK and restart VS Code.' }; $sdk = $localSdk }; & $sdk build .\\DokiDoki.csproj -c Debug; exit $LASTEXITCODE"
+      ],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": "$msCompile"
+    }
+  ]
+}
