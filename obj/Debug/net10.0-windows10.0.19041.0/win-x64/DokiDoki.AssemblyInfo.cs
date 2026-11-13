@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DokiDoki")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f8737e3b9f6efacf1f7140b2706cd273cfeeb678")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9c356e5cb3c497181cee9a56e9af0ab20988fd62")]
 [assembly: System.Reflection.AssemblyProductAttribute("DokiDoki")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DokiDoki")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

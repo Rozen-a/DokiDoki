@@ -11,8 +11,10 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <SelfContained>true</SelfContained>
     <AssemblyName>DokiDoki</AssemblyName>
+    <ApplicationIcon>Frontend/Assets/Heart.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <ApplicationDefinition Include="Frontend/App.xaml" />
+    <Resource Include="Frontend/Assets/Heart.png" />
   </ItemGroup>
 </Project>
