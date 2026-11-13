@@ -230,7 +230,7 @@ public sealed partial class HeartRateWindow : Window
 
         if (overlay == null)
         {
-            overlay = new HeartRateOverlay();
+            overlay = new HeartRateOverlay { Owner = this };
             overlay.Closed += (_, _) => overlay = null;
         }
 

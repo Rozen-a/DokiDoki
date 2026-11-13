@@ -79,7 +79,7 @@ public sealed partial class HeartRateOverlay : Window
     {
         if (trendHint == null || samples == null || trendPanel.Visibility != Visibility.Visible) return;
         trendHint.Visibility = samples.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        HeartRateTrend.Draw(trend, samples, now);
+        HeartRateTrend.Draw(trend, samples, now, strokeWidth: 1.25);
     }
 
     /// <summary>Refreshes the curve after the chart is measured.</summary>

@@ -1,6 +1,7 @@
 <Window x:Class="DokiDoki.Frontend.HeartRateOverlay"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:DokiDoki.Frontend"
         Title="DokiDoki 悬浮窗" SizeToContent="WidthAndHeight"
         WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True"
         Background="Transparent" Topmost="True" ShowInTaskbar="False" ShowActivated="False"
@@ -15,19 +16,16 @@
             <Image x:Name="heart" Width="48" Height="48" Margin="-3,0" Source="/Frontend/Assets/Heart.png"
                    RenderOptions.BitmapScalingMode="NearestNeighbor" />
             <StackPanel x:Name="rate" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                <StackPanel.Effect>
-                    <DropShadowEffect Color="White" ShadowDepth="0" BlurRadius="5" Opacity="0.9" />
-                </StackPanel.Effect>
-                <TextBlock x:Name="bpmText" Text="—" Foreground="#22354F" FontSize="34" FontWeight="Bold" />
-                <TextBlock Text="BPM" Foreground="#394C68" FontSize="11" FontWeight="SemiBold"
-                           VerticalAlignment="Bottom" Margin="3,0,0,7" />
+                <local:OutlinedText x:Name="bpmText" Text="—" Foreground="#22354F" FontSize="34" FontWeight="Bold" />
+                <local:OutlinedText Text="BPM" Foreground="#394C68" FontSize="11" FontWeight="SemiBold"
+                           VerticalAlignment="Bottom" Margin="0,0,0,7" />
             </StackPanel>
         </Grid>
         <Border x:Name="trendPanel" Width="{Binding ActualWidth, ElementName=readingRow}" HorizontalAlignment="Left" Height="33" Margin="0,2,0,0" CornerRadius="10">
             <Grid Margin="3" ClipToBounds="True">
                 <Canvas x:Name="trend" SizeChanged="TrendSizeChanged" />
-                <TextBlock x:Name="trendHint" Text="等待心率数据" FontSize="11" Foreground="#394C68"
-                           VerticalAlignment="Center" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <local:OutlinedText x:Name="trendHint" Text="等待心率数据" FontSize="11" Foreground="#394C68"
+                           VerticalAlignment="Center" HorizontalAlignment="Center" />
             </Grid>
         </Border>
     </StackPanel>

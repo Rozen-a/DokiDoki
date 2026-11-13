@@ -18,8 +18,9 @@ internal static class HeartRateTrend
     /// <param name="chart">The measured target canvas.</param>
     /// <param name="history">Timestamped samples in chronological order.</param>
     /// <param name="now">Current elapsed seconds on the sample clock.</param>
+    /// <param name="strokeWidth">Curve thickness in device-independent pixels.</param>
     /// <returns>The formatted BPM range, or an empty string without samples.</returns>
-    internal static string Draw(Canvas chart, Queue<(double Time, int Bpm)> history, double now)
+    internal static string Draw(Canvas chart, Queue<(double Time, int Bpm)> history, double now, double strokeWidth = 2.5)
     {
         chart.Children.Clear();
         if (history.Count == 0) return "";
@@ -39,12 +40,13 @@ internal static class HeartRateTrend
         }
 
         var pink = new SolidColorBrush(Color.FromRgb(196, 52, 107));
-        chart.Children.Add(new Polyline { Points = points, Stroke = pink, StrokeThickness = 2.5,
+        chart.Children.Add(new Polyline { Points = points, Stroke = pink, StrokeThickness = strokeWidth,
             StrokeLineJoin = PenLineJoin.Round });
         var latest = points[points.Count - 1];
-        var dot = new Ellipse { Width = 7, Height = 7, Fill = pink };
-        Canvas.SetLeft(dot, latest.X - 3.5);
-        Canvas.SetTop(dot, latest.Y - 3.5);
+        var dotSize = strokeWidth * 2.8;
+        var dot = new Ellipse { Width = dotSize, Height = dotSize, Fill = pink };
+        Canvas.SetLeft(dot, latest.X - dotSize / 2);
+        Canvas.SetTop(dot, latest.Y - dotSize / 2);
         chart.Children.Add(dot);
         return label;
     }
