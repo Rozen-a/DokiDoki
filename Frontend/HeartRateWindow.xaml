@@ -127,11 +127,31 @@
                 </Grid>
             </Border>
 
-            <UniformGrid Grid.Row="2" Columns="2">
+            <StackPanel Grid.Row="2">
+            <UniformGrid Columns="2">
                 <Button x:Name="openDevices" Content="连接设备" Margin="0,0,6,0" Click="OpenDevicesClick" />
                 <Button x:Name="disconnect" Content="断开连接" Margin="6,0,0,0" Background="#FBE0ED"
                         IsEnabled="False" Click="DisconnectClick" />
             </UniformGrid>
+                <Border Background="White" CornerRadius="16" Padding="14,9" Margin="0,10,0,0">
+                    <Expander Header="悬浮窗设置">
+                        <WrapPanel Margin="0,8,0,0">
+                            <CheckBox x:Name="overlayEnabled" Content="开启悬浮窗" Margin="0,0,12,6"
+                                      Checked="OverlayOptionsChanged" Unchecked="OverlayOptionsChanged" />
+                            <CheckBox x:Name="overlayRight" Content="爱心右置" Margin="0,0,12,6"
+                                      Checked="OverlayOptionsChanged" Unchecked="OverlayOptionsChanged" />
+                            <CheckBox x:Name="overlayBpmRight" Content="心率右置" IsChecked="True" Margin="0,0,12,6"
+                                      Checked="OverlayOptionsChanged" Unchecked="OverlayOptionsChanged" />
+                            <CheckBox x:Name="overlayTrend" Content="显示波动" IsChecked="True" Margin="0,0,12,6"
+                                      Checked="OverlayOptionsChanged" Unchecked="OverlayOptionsChanged" />
+                            <CheckBox x:Name="overlayBackground" Content="波动半透明背景" IsChecked="True" Margin="0,0,12,6"
+                                      Checked="OverlayOptionsChanged" Unchecked="OverlayOptionsChanged" />
+                            <CheckBox x:Name="overlayLocked" Content="锁定位置" Margin="0,0,0,6"
+                                      Checked="OverlayOptionsChanged" Unchecked="OverlayOptionsChanged" />
+                        </WrapPanel>
+                    </Expander>
+                </Border>
+            </StackPanel>
         </Grid>
 
         <Border x:Name="devicePage" Background="White" CornerRadius="28" Padding="22" Visibility="Collapsed">

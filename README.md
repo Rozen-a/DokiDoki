@@ -23,6 +23,12 @@
 - **连接状态提示**。断开连接或读数中断时，清空旧读数并提示当前状态。
 - **本地处理**。心率数据仅在本地显示，不写入文件。
 
+## 悬浮窗
+
+在主界面展开「悬浮窗设置」，勾选「开启悬浮窗」。悬浮窗默认置顶，可按住卡片拖动。勾选「锁定位置」后停止拖动，取消勾选即可再次移动。
+
+爱心和 BPM 可各自选择靠左或靠右。可以隐藏最近 60 秒的心率曲线，也可以单独关闭曲线的半透明背景。悬浮窗与主界面同步，断开时会清空读数。
+
 ## 运行环境与验证状态
 
 - **目标环境**为 Windows 10 22H2 或 Windows 11（x64），电脑需支持 BLE。
@@ -74,7 +80,10 @@ DokiDoki/
 │   ├── App.xaml                   # WPF 应用配置和启动窗口
 │   ├── App.xaml.cs                # WPF 应用入口类
 │   ├── HeartRateWindow.xaml       # 设备列表、按钮、状态和 BPM 布局
-│   └── HeartRateWindow.xaml.cs    # 响应操作、更新窗口及处理读数超时
+│   ├── HeartRateWindow.xaml.cs    # 主界面、设备选择和悬浮窗控制
+│   ├── HeartRateOverlay.xaml      # 置顶悬浮窗布局
+│   ├── HeartRateOverlay.xaml.cs   # 同步读数，应用布局和拖动锁定
+│   └── HeartRateTrend.cs          # 绘制主界面和悬浮窗的共享心率曲线
 ├── Backend/
 │   ├── BleHeartRateService.cs     # BLE 扫描、GATT 连接、订阅及资源释放
 │   └── BleMeasurement.cs          # WinRT 异步操作与心率测量数据解析

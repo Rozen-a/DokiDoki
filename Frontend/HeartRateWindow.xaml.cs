@@ -2,12 +2,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 using DokiDoki.Backend;
 
@@ -16,7 +13,7 @@ namespace DokiDoki.Frontend;
 /// <summary>Displays device connection state, current BPM, and the rolling heart-rate trend.</summary>
 public sealed partial class HeartRateWindow : Window
 {
-    private const double HistorySeconds = 60;
+    private HeartRateOverlay overlay;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(500) };
     private readonly DispatcherTimer toastTimer = new() { Interval = TimeSpan.FromSeconds(3) };
     private readonly Stopwatch clock = Stopwatch.StartNew();
@@ -193,36 +190,32 @@ public sealed partial class HeartRateWindow : Window
     {
         if (chart == null || chartHint == null || range == null) return;
         var now = clock.Elapsed.TotalSeconds;
-        while (history.TryPeek(out var oldest) && now - oldest.Time > HistorySeconds)
+        while (history.TryPeek(out var oldest) && now - oldest.Time > HeartRateTrend.HistorySeconds)
             history.Dequeue();
-        chart.Children.Clear();
         chartHint.Visibility = history.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         chartHint.Text = connected ? "等待心率数据" : "连接后显示心率趋势";
-        range.Text = "";
-        if (history.Count == 0 || chart.ActualWidth <= 8 || chart.ActualHeight <= 8) return;
+        range.Text = HeartRateTrend.Draw(chart, history, now);
+        overlay?.UpdateReading(reading.Text, history, now);
+    }
 
-        var min = history.Min(sample => sample.Bpm);
-        var max = history.Max(sample => sample.Bpm);
-        range.Text = min == max ? min + " BPM" : $"{min}–{max} BPM";
-        var floor = min - 3;
-        var ceiling = max + 3;
-        var points = new PointCollection();
-        foreach (var sample in history)
+    /// <summary>Shows, hides, and configures the optional floating window.</summary>
+    /// <param name="sender">The setting that changed.</param>
+    /// <param name="args">The WPF checked or unchecked event.</param>
+    private void OverlayOptionsChanged(object sender, RoutedEventArgs args)
+    {
+        if (overlayEnabled == null || overlayRight == null || overlayBpmRight == null || overlayTrend == null ||
+            overlayBackground == null || overlayLocked == null) return;
+        if (overlayEnabled.IsChecked != true)
         {
-            var progress = Math.Clamp(1 - (now - sample.Time) / HistorySeconds, 0, 1);
-            var x = 4 + progress * (chart.ActualWidth - 8);
-            var y = 4 + (ceiling - sample.Bpm) * (chart.ActualHeight - 8) / (ceiling - floor);
-            points.Add(new Point(x, y));
+            overlay?.Hide();
+            return;
         }
 
-        var pink = new SolidColorBrush(Color.FromRgb(196, 52, 107));
-        chart.Children.Add(new Polyline { Points = points, Stroke = pink, StrokeThickness = 2.5,
-            StrokeLineJoin = PenLineJoin.Round });
-        var latest = points[points.Count - 1];
-        var dot = new Ellipse { Width = 7, Height = 7, Fill = pink };
-        Canvas.SetLeft(dot, latest.X - 3.5);
-        Canvas.SetTop(dot, latest.Y - 3.5);
-        chart.Children.Add(dot);
+        overlay ??= new HeartRateOverlay();
+        overlay.ApplyOptions(overlayRight.IsChecked == true, overlayBpmRight.IsChecked == true, overlayTrend.IsChecked == true,
+            overlayBackground.IsChecked == true, overlayLocked.IsChecked == true);
+        if (!overlay.IsVisible) overlay.Show();
+        RenderTrend();
     }
 
     /// <summary>Releases Bluetooth resources and clears the dashboard for the next session.</summary>
