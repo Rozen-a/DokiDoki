@@ -1,0 +1,87 @@
+<Window x:Class="DokiDoki.Frontend.OverlaySettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="DokiDoki · 悬浮窗设置" Icon="/Frontend/Assets/Heart.png"
+        Width="380" SizeToContent="Height" ResizeMode="NoResize"
+        Background="#EFF7FF" Foreground="#22354F" FontFamily="Segoe UI, Microsoft YaHei UI"
+        FontSize="14" WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <Window.Resources>
+        <ControlTemplate x:Key="OptionTemplate" TargetType="ToggleButton">
+            <Border x:Name="surface" Background="#E3F0FE" BorderBrush="Transparent" BorderThickness="1"
+                    CornerRadius="12" Padding="10,7" SnapsToDevicePixels="True">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border x:Name="indicator" Width="19" Height="19" CornerRadius="7" Margin="0,0,8,0"
+                            Background="White" BorderBrush="#829FBE" BorderThickness="1">
+                        <Path x:Name="check" Data="M 0,4 L 3,7 L 8,1" Stroke="#743452" StrokeThickness="1.8"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                              HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+                    </Border>
+                    <ContentPresenter x:Name="label" Grid.Column="1" VerticalAlignment="Center"
+                                      RecognizesAccessKey="True" TextElement.Foreground="#22354F" />
+                </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter TargetName="surface" Property="Background" Value="#FAD7E8" />
+                    <Setter TargetName="indicator" Property="Background" Value="#EEA6C8" />
+                    <Setter TargetName="indicator" Property="BorderBrush" Value="#CA719E" />
+                    <Setter TargetName="check" Property="Visibility" Value="Visible" />
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="surface" Property="BorderBrush" Value="#9CB7D6" />
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter TargetName="surface" Property="BorderBrush" Value="#4B719D" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter TargetName="surface" Property="Background" Value="#F3F7FB" />
+                    <Setter TargetName="surface" Property="BorderBrush" Value="Transparent" />
+                    <Setter TargetName="indicator" Property="Background" Value="#EBF0F6" />
+                    <Setter TargetName="indicator" Property="BorderBrush" Value="#C8D4E2" />
+                    <Setter TargetName="check" Property="Stroke" Value="#8599B1" />
+                    <Setter TargetName="label" Property="TextElement.Foreground" Value="#77899F" />
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+        <Style x:Key="OverlayOptionStyle" TargetType="ToggleButton">
+            <Setter Property="Margin" Value="0,3" />
+            <Setter Property="MinHeight" Value="36" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template" Value="{StaticResource OptionTemplate}" />
+        </Style>
+        <Style TargetType="CheckBox" BasedOn="{StaticResource OverlayOptionStyle}" />
+        <Style TargetType="RadioButton" BasedOn="{StaticResource OverlayOptionStyle}" />
+    </Window.Resources>
+    <StackPanel Margin="20">
+        <Border Background="#FFE5F0" CornerRadius="22" Padding="16,11" Margin="0,0,0,10">
+            <DockPanel>
+                <Image DockPanel.Dock="Right" Width="36" Height="36" Source="/Frontend/Assets/Heart.png" />
+                <CheckBox x:Name="enabled" Content="开启悬浮窗" FontSize="17" FontWeight="SemiBold"
+                          VerticalAlignment="Center" />
+            </DockPanel>
+        </Border>
+        <Border Background="White" CornerRadius="20" Padding="16,12"
+                IsEnabled="{Binding IsChecked, ElementName=enabled}">
+            <StackPanel>
+                <TextBlock Text="显示与位置" FontWeight="SemiBold" Margin="0,0,0,4" />
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition /></Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <RadioButton x:Name="heartRight" Content="爱心右置" GroupName="OverlayLayout" />
+                        <RadioButton x:Name="rateRight" Content="心率右置" GroupName="OverlayLayout" />
+                        <CheckBox x:Name="locked" Content="锁定位置" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                        <CheckBox x:Name="showTrend" Content="显示波动" />
+                        <CheckBox x:Name="showBackground" Content="波动半透明背景"
+                                  IsEnabled="{Binding IsChecked, ElementName=showTrend}" />
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</Window>

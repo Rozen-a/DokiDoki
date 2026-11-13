@@ -14,6 +14,8 @@ namespace DokiDoki.Frontend;
 public sealed partial class HeartRateWindow : Window
 {
     private HeartRateOverlay overlay;
+    private OverlaySettingsWindow overlaySettings;
+    private OverlayOptions overlayOptions = new();
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(500) };
     private readonly DispatcherTimer toastTimer = new() { Interval = TimeSpan.FromSeconds(3) };
     private readonly Stopwatch clock = Stopwatch.StartNew();
@@ -39,6 +41,7 @@ public sealed partial class HeartRateWindow : Window
         Closed += (_, _) =>
         {
             toastTimer.Stop();
+            overlay?.Close();
             Disconnect("已断开连接");
         };
         timer.Tick += (_, _) =>
@@ -198,22 +201,41 @@ public sealed partial class HeartRateWindow : Window
         overlay?.UpdateReading(reading.Text, history, now);
     }
 
-    /// <summary>Shows, hides, and configures the optional floating window.</summary>
-    /// <param name="sender">The setting that changed.</param>
-    /// <param name="args">The WPF checked or unchecked event.</param>
-    private void OverlayOptionsChanged(object sender, RoutedEventArgs args)
+    /// <summary>Opens or activates the independent floating-window settings.</summary>
+    /// <param name="sender">The settings button.</param>
+    /// <param name="args">The WPF click event.</param>
+    private void OpenOverlaySettingsClick(object sender, RoutedEventArgs args)
     {
-        if (overlayEnabled == null || overlayRight == null || overlayBpmRight == null || overlayTrend == null ||
-            overlayBackground == null || overlayLocked == null) return;
-        if (overlayEnabled.IsChecked != true)
+        if (overlaySettings != null)
+        {
+            overlaySettings.Activate();
+            return;
+        }
+
+        overlaySettings = new OverlaySettingsWindow(overlayOptions, ApplyOverlayOptions) { Owner = this };
+        overlaySettings.Closed += (_, _) => overlaySettings = null;
+        overlaySettings.Show();
+    }
+
+    /// <summary>Applies settings immediately and updates the floating window with the current reading.</summary>
+    /// <param name="options">The latest settings snapshot.</param>
+    private void ApplyOverlayOptions(OverlayOptions options)
+    {
+        overlayOptions = options;
+        if (!options.Enabled)
         {
             overlay?.Hide();
             return;
         }
 
-        overlay ??= new HeartRateOverlay();
-        overlay.ApplyOptions(overlayRight.IsChecked == true, overlayBpmRight.IsChecked == true, overlayTrend.IsChecked == true,
-            overlayBackground.IsChecked == true, overlayLocked.IsChecked == true);
+        if (overlay == null)
+        {
+            overlay = new HeartRateOverlay();
+            overlay.Closed += (_, _) => overlay = null;
+        }
+
+        overlay.ApplyOptions(options.HeartRight, options.ShowTrend,
+            options.ShowBackground, options.Locked);
         if (!overlay.IsVisible) overlay.Show();
         RenderTrend();
     }
