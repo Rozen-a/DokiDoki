@@ -82,7 +82,7 @@
     "version": "1.0.0",
     "restore": {
       "projectUniqueName": "D:\\rozen_file\\Program\\DokiDoki\\DokiDoki-gh\\DokiDoki.csproj",
-      "projectName": "HeartRate",
+      "projectName": "DokiDoki",
       "projectPath": "D:\\rozen_file\\Program\\DokiDoki\\DokiDoki-gh\\DokiDoki.csproj",
       "packagesPath": "C:\\Users\\rozen\\.nuget\\packages\\",
       "outputPath": "D:\\rozen_file\\Program\\DokiDoki\\DokiDoki-gh\\obj\\",

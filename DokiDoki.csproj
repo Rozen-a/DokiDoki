@@ -10,7 +10,7 @@
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <SelfContained>true</SelfContained>
-    <AssemblyName>HeartRate</AssemblyName>
+    <AssemblyName>DokiDoki</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
     <ApplicationDefinition Include="Frontend/App.xaml" />

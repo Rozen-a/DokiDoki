@@ -10,12 +10,12 @@
 using System;
 using System.Reflection;
 
-[assembly: System.Reflection.AssemblyCompanyAttribute("HeartRate")]
+[assembly: System.Reflection.AssemblyCompanyAttribute("DokiDoki")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+94cf9574b617d2c9c8c07778fc79df71a0e007d6")]
-[assembly: System.Reflection.AssemblyProductAttribute("HeartRate")]
-[assembly: System.Reflection.AssemblyTitleAttribute("HeartRate")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f8737e3b9f6efacf1f7140b2706cd273cfeeb678")]
+[assembly: System.Reflection.AssemblyProductAttribute("DokiDoki")]
+[assembly: System.Reflection.AssemblyTitleAttribute("DokiDoki")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
 [assembly: System.Runtime.Versioning.TargetPlatformAttribute("Windows10.0.19041.0")]
 [assembly: System.Runtime.Versioning.SupportedOSPlatformAttribute("Windows10.0.19041.0")]

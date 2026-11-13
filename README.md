@@ -11,7 +11,7 @@
 
 ## 快速开始
 
-1. 克隆仓库，双击根目录的 [HeartRate.exe](./HeartRate.exe)。程序自带 .NET 和 WPF 运行时。
+1. 克隆仓库，双击根目录的 [DokiDoki.exe](./DokiDoki.exe)。程序自带 .NET 和 WPF 运行时。
 2. 戴好手环，在手环的「设置 → 心率广播」中开启广播。
 3. 在应用中点击「扫描」，选中以 `HUAWEI Band HR` 开头的设备，再点击「连接」。
 4. 收到有效读数后，窗口会显示当前 BPM。点击「断开」可停止接收并清空读数。
@@ -54,7 +54,7 @@ dotnet run --project .\DokiDoki.csproj
 dotnet publish .\DokiDoki.csproj -c Release -o .\publish
 ```
 
-发布文件为 `publish/HeartRate.exe`。如需清理本地构建产物，可删除 `bin/`、`obj/` 和 `publish/`。
+发布文件为 `publish/DokiDoki.exe`。如需清理本地构建产物，可删除 `bin/`、`obj/` 和 `publish/`。
 
 ## 项目结构
 
@@ -75,15 +75,15 @@ DokiDoki/
 │   ├── Debug/                    # VS Code 一键运行使用的调试输出
 │   │   └── net10.0-windows10.0.19041.0/
 │   │       └── win-x64/
-│   │           └── HeartRate.exe # 调试入口
+│   │           └── DokiDoki.exe # 调试入口
 │   └── Release/                  # Release 构建输出
 │       └── net10.0-windows10.0.19041.0/
 │           └── win-x64/
-│               └── HeartRate.exe # Release 构建的程序
+│               └── DokiDoki.exe # Release 构建的程序
 ├── DokiDoki.sln                   # Visual Studio 解决方案
 ├── DokiDoki.csproj                # .NET 10 WPF 项目及 x64 发布配置
 ├── global.json                    # .NET 10 SDK 版本选择
-├── HeartRate.exe                  # 可直接运行的 Windows x64 程序
+├── DokiDoki.exe                  # 可直接运行的 Windows x64 程序
 └── README.md                      # 使用、开发和发布说明
 ```
 

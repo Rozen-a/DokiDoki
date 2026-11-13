@@ -1,7 +1,7 @@
 <Window x:Class="DokiDoki.Frontend.HeartRateWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="手环心率" Width="520" Height="300" MinWidth="400" MinHeight="240"
+        Title="DokiDoki" Width="520" Height="300" MinWidth="400" MinHeight="240"
         WindowStartupLocation="CenterScreen" UseLayoutRounding="True">
     <Grid Margin="24">
         <Grid.ColumnDefinitions>
