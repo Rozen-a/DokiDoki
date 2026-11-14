@@ -19,8 +19,9 @@ internal static class HeartRateTrend
     /// <param name="history">Timestamped samples in chronological order.</param>
     /// <param name="now">Current elapsed seconds on the sample clock.</param>
     /// <param name="strokeWidth">Curve thickness in device-independent pixels.</param>
+    /// <param name="showAxis">Shows BPM ticks and grid lines on the dashboard.</param>
     /// <returns>The formatted BPM range, or an empty string without samples.</returns>
-    internal static string Draw(Canvas chart, Queue<(double Time, int Bpm)> history, double now, double strokeWidth = 2.5)
+    internal static string Draw(Canvas chart, Queue<(double Time, int Bpm)> history, double now, double strokeWidth = 2.5, bool showAxis = false)
     {
         chart.Children.Clear();
         if (history.Count == 0) return "";
@@ -30,12 +31,37 @@ internal static class HeartRateTrend
         if (chart.ActualWidth <= 8 || chart.ActualHeight <= 8) return label;
         var floor = min - 3;
         var ceiling = max + 3;
+        var left = showAxis ? 37 : 4;
+        var inset = showAxis ? 10 : 4;
+        var plotWidth = chart.ActualWidth - left - 4;
+        var plotHeight = chart.ActualHeight - inset * 2;
+        if (plotWidth <= 0 || plotHeight <= 0) return label;
+
+        if (showAxis)
+        {
+            // Round the rolling data range outward to readable integer BPM ticks.
+            var step = Math.Max(2, (int)Math.Ceiling((ceiling - floor) / 20.0) * 5);
+            floor = Math.Max(0, (int)Math.Floor(floor / (double)step) * step);
+            ceiling = (int)Math.Ceiling(ceiling / (double)step) * step;
+            for (var tick = floor; tick <= ceiling; tick += step)
+            {
+                var y = inset + (ceiling - tick) * plotHeight / (ceiling - floor);
+                chart.Children.Add(new Line { X1 = left, X2 = left + plotWidth, Y1 = y, Y2 = y,
+                    Stroke = Brushes.LightSteelBlue, StrokeThickness = 1, Opacity = 0.5 });
+                var caption = new TextBlock { Text = tick.ToString(), Width = left - 6,
+                    TextAlignment = TextAlignment.Right, FontSize = 11, Foreground = Brushes.SlateGray };
+                caption.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                Canvas.SetTop(caption, y - caption.DesiredSize.Height / 2);
+                chart.Children.Add(caption);
+            }
+        }
+
         var points = new PointCollection();
         foreach (var sample in history)
         {
             var progress = Math.Clamp(1 - (now - sample.Time) / HistorySeconds, 0, 1);
-            var x = 4 + progress * (chart.ActualWidth - 8);
-            var y = 4 + (ceiling - sample.Bpm) * (chart.ActualHeight - 8) / (ceiling - floor);
+            var x = left + progress * plotWidth;
+            var y = inset + (ceiling - sample.Bpm) * plotHeight / (ceiling - floor);
             points.Add(new Point(x, y));
         }
 

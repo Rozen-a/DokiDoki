@@ -203,7 +203,7 @@ public sealed partial class HeartRateWindow : Window
             history.Dequeue();
         chartHint.Visibility = history.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         chartHint.Text = connected ? "等待心率数据" : "连接后显示心率趋势";
-        range.Text = HeartRateTrend.Draw(chart, history, now);
+        range.Text = HeartRateTrend.Draw(chart, history, now, showAxis: true);
         overlay?.UpdateReading(reading.Text, history, now);
         obsCapture?.Update(JsonSerializer.Serialize(new
         {
