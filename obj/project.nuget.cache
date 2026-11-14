@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "dbWjSVBsTdA=",
+  "dgSpecHash": "k8BeBVXwXTo=",
   "success": true,
   "projectFilePath": "D:\\rozen_file\\Program\\DokiDoki\\DokiDoki-gh\\DokiDoki.csproj",
   "expectedPackageFiles": [
@@ -10,5 +10,15 @@
     "C:\\Users\\rozen\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\10.0.15\\microsoft.aspnetcore.app.runtime.win-x64.10.0.15.nupkg.sha512",
     "C:\\Users\\rozen\\.nuget\\packages\\microsoft.windows.sdk.net.ref\\10.0.19041.57\\microsoft.windows.sdk.net.ref.10.0.19041.57.nupkg.sha512"
   ],
-  "logs": []
+  "logs": [
+    {
+      "code": "NU1900",
+      "level": "Warning",
+      "message": "获取包漏洞数据时出错: 无法加载源 https://api.nuget.org/v3/index.json 的服务索引。",
+      "projectPath": "D:\\rozen_file\\Program\\DokiDoki\\DokiDoki-gh\\DokiDoki.csproj",
+      "warningLevel": 1,
+      "filePath": "D:\\rozen_file\\Program\\DokiDoki\\DokiDoki-gh\\DokiDoki.csproj",
+      "targetGraphs": []
+    }
+  ]
 }

@@ -196,7 +196,7 @@ namespace DokiDoki.Frontend {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/DokiDoki;component/frontend/heartratewindow.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/DokiDoki-v1.0.0;V1.0.0.0;component/frontend/heartratewindow.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\..\..\Frontend\HeartRateWindow.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);
