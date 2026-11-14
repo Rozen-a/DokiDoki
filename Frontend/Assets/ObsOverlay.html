@@ -15,7 +15,10 @@ body{font:700 238px "Segoe UI",sans-serif;color:#22354f}
 #reading{gap:14px;width:max-content}
 #reading.right{flex-direction:row-reverse}
 img{width:336px;height:336px;margin:0 -21px;image-rendering:pixelated}
-#rate{white-space:nowrap;-webkit-text-stroke:21px white;paint-order:stroke fill}
+#rate{white-space:nowrap}
+#bpm{--outline:6px}
+#unit{--outline:2px}
+#bpm,#unit{text-shadow:var(--outline) 0 #fff,calc(-1 * var(--outline)) 0 #fff,0 var(--outline) #fff,0 calc(-1 * var(--outline)) #fff}
 #unit{font-size:77px;margin:0 0 42px 21px;align-self:flex-end;color:#394c68}
 svg{display:block;width:100%;height:100%;min-height:0;border-radius:28px}
 svg.shaded{background:rgba(221,238,255,.61)}
@@ -35,6 +38,36 @@ const bpm = document.querySelector('#bpm');
 const chart = document.querySelector('#chart');
 const line = document.querySelector('#line');
 
+const heart = reading.querySelector('img');
+let targetTempo = 0, currentTempo = 0, phase = 0, lastFrame = 0, frame = 0;
+
+// Ease the animation tempo while preserving phase across incoming samples.
+function animate(now) {
+  const seconds = Math.max(0, now - lastFrame) / 1000;
+  lastFrame = now;
+  const difference = currentTempo - targetTempo;
+  const blend = 1 - Math.exp(-seconds / 0.75);
+  phase = (phase + (targetTempo * seconds + difference * 0.75 * blend) / 60) % 1;
+  currentTempo -= difference * blend;
+  heart.style.transform = 'scale(' + (1 + 0.09 * (1 - Math.cos(2 * Math.PI * phase))) + ')';
+  frame = requestAnimationFrame(animate);
+}
+
+// Start once per live session and restore the original size when idle.
+function setTempo(tempo) {
+  targetTempo = tempo;
+  if (tempo > 0 && !frame) {
+    currentTempo = tempo;
+    lastFrame = performance.now();
+    frame = requestAnimationFrame(animate);
+  } else if (!tempo && frame) {
+    cancelAnimationFrame(frame);
+    frame = 0;
+    phase = 0;
+    heart.style.transform = '';
+  }
+}
+
 // Poll serially and hide the overlay if DokiDoki stops serving.
 async function refresh() {
   try {
@@ -53,8 +86,10 @@ async function refresh() {
        4 + 25 * (ceiling - point.bpm) / (ceiling - floor)].join(',')
     ).join(' '));
     overlay.hidden = false;
+    setTempo(state.pulseTempo || 0);
   } catch {
     overlay.hidden = true;
+    setTempo(0);
   } finally {
     setTimeout(refresh, 500);
   }

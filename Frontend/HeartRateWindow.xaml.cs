@@ -209,6 +209,7 @@ public sealed partial class HeartRateWindow : Window
         obsCapture?.Update(JsonSerializer.Serialize(new
         {
             bpm = reading.Text,
+            pulseTempo = PulsingHeart.GetTempo(history.TryPeek(out _) ? history.Last().Bpm : 0),
             heartRight = overlayOptions.HeartRight,
             showTrend = overlayOptions.ShowTrend,
             showBackground = overlayOptions.ShowBackground,

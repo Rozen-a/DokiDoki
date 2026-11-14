@@ -31,21 +31,25 @@ public sealed class PulsingHeart : Image
     /// <param name="value">Current beats per minute, or zero when no reading is available.</param>
     internal void SetRate(int value)
     {
-        // These bands set visual tempo only. The displayed BPM stays exact.
-        var tempo = value switch
-        {
-            <= 0 => 0,
-            < 60 => 50,
-            < 80 => 70,
-            < 100 => 90,
-            < 120 => 110,
-            < 150 => 135,
-            _ => 160
-        };
+        var tempo = GetTempo(value);
         if (targetBpm == tempo) return;
         targetBpm = tempo;
         UpdatePlayback();
     }
+
+    /// <summary>Maps measured BPM to a shared visual animation tempo.</summary>
+    /// <param name="value">Measured BPM, or zero without a reading.</param>
+    /// <returns>Beats per minute for the animation.</returns>
+    internal static int GetTempo(int value) => value switch
+    {
+        <= 0 => 0,
+        < 60 => 50,
+        < 80 => 70,
+        < 100 => 90,
+        < 120 => 110,
+        < 150 => 135,
+        _ => 160
+    };
 
     /// <summary>Runs frame updates only while a loaded, visible heart has a valid reading.</summary>
     private void UpdatePlayback()
