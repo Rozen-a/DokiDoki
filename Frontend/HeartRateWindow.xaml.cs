@@ -259,7 +259,8 @@ public sealed partial class HeartRateWindow : Window
 
         if (overlay == null)
         {
-            overlay = new HeartRateOverlay { Owner = this };
+            // Keep the overlay independent of minimization. Closed handles its lifetime.
+            overlay = new HeartRateOverlay();
             overlay.Closed += (_, _) => overlay = null;
         }
 
