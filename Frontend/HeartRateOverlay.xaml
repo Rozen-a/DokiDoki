@@ -7,13 +7,15 @@
         Background="Transparent" Topmost="True" ShowInTaskbar="False" ShowActivated="False"
         WindowStartupLocation="CenterScreen" UseLayoutRounding="True">
     <StackPanel Background="Transparent" MouseLeftButtonDown="DragSurface">
-        <Grid x:Name="readingRow" HorizontalAlignment="Left">
+        <!-- Reserve space for the heart's 18% render-time growth so the
+             size-to-content window does not clip its pulse at either edge. -->
+        <Grid x:Name="readingRow" HorizontalAlignment="Left" Margin="4,4,4,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="2" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Image x:Name="heart" Width="48" Height="48" Margin="-3,0" Source="/Frontend/Assets/Heart.png"
+            <local:PulsingHeart x:Name="heart" Width="40" Height="40" Margin="-3,0" Source="/Frontend/Assets/Heart.png"
                    RenderOptions.BitmapScalingMode="NearestNeighbor" />
             <StackPanel x:Name="rate" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                 <local:OutlinedText x:Name="bpmText" Text="—" Foreground="#22354F" FontSize="34" FontWeight="Bold" />

@@ -189,6 +189,7 @@ public sealed partial class HeartRateWindow : Window
             lastReading = clock.Elapsed.TotalSeconds;
             history.Enqueue((lastReading, bpm));
             reading.Text = bpm.ToString();
+            dashboardHeart.SetRate(bpm);
             dashboardMessage.Text = "正在接收心率";
             RenderTrend();
         });
@@ -248,7 +249,7 @@ public sealed partial class HeartRateWindow : Window
         }
 
         overlayOptions = options;
-        if (!options.Enabled || (options.Capture && options.CaptureOnly))
+        if (!options.Enabled)
         {
             overlay?.Hide();
             RenderTrend();
@@ -290,6 +291,7 @@ public sealed partial class HeartRateWindow : Window
         bluetooth.Dispose();
         history.Clear();
         reading.Text = "—";
+        dashboardHeart.SetRate(0);
         connectionState.Text = "未连接设备";
         dashboardMessage.Text = message;
         RenderTrend();

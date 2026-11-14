@@ -1,8 +1,9 @@
 <Window x:Class="DokiDoki.Frontend.HeartRateWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:DokiDoki.Frontend"
         Title="DokiDoki" Icon="/Frontend/Assets/Heart.png"
-        Width="660" Height="660" MinWidth="490" MinHeight="580"
+        Width="580" Height="660" MinWidth="490" MinHeight="580"
         Background="#EFF7FF" Foreground="#22354F"
         FontFamily="Segoe UI, Microsoft YaHei UI" FontSize="14"
         WindowStartupLocation="CenterScreen" UseLayoutRounding="True">
@@ -97,7 +98,7 @@
                         <TextBlock x:Name="dashboardMessage" Text="在手环上开启心率广播，然后连接设备。"
                                    Margin="0,6,0,0" Foreground="#546681" TextWrapping="Wrap" />
                     </StackPanel>
-                    <Image Grid.Column="1" Source="/Frontend/Assets/Heart.png" Width="112" Height="112"
+                    <local:PulsingHeart x:Name="dashboardHeart" Grid.Column="1" Source="/Frontend/Assets/Heart.png" Width="96" Height="96"
                            Margin="14,0,0,0" RenderOptions.BitmapScalingMode="NearestNeighbor" />
                 </Grid>
             </Border>

@@ -69,6 +69,7 @@ public sealed partial class HeartRateOverlay : Window
     internal void UpdateReading(string bpm, Queue<(double Time, int Bpm)> history, double timestamp)
     {
         bpmText.Text = bpm;
+        heart.SetRate(int.TryParse(bpm, out var value) ? value : 0);
         samples = history;
         now = timestamp;
         DrawTrend();

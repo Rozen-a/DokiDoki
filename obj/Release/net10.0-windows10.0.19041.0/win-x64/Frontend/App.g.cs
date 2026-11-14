@@ -43,7 +43,7 @@ namespace DokiDoki.Frontend {
         /// InitializeComponent
         /// </summary>
         [System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [System.CodeDom.Compiler.GeneratedCodeAttribute("PresentationBuildTasks", "10.0.0.0")]
+        [System.CodeDom.Compiler.GeneratedCodeAttribute("PresentationBuildTasks", "10.0.15.0")]
         public void InitializeComponent() {
             
             #line 4 "..\..\..\..\..\Frontend\App.xaml"
@@ -58,7 +58,7 @@ namespace DokiDoki.Frontend {
         /// </summary>
         [System.STAThreadAttribute()]
         [System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [System.CodeDom.Compiler.GeneratedCodeAttribute("PresentationBuildTasks", "10.0.0.0")]
+        [System.CodeDom.Compiler.GeneratedCodeAttribute("PresentationBuildTasks", "10.0.15.0")]
         public static void Main() {
             DokiDoki.Frontend.App app = new DokiDoki.Frontend.App();
             app.InitializeComponent();
