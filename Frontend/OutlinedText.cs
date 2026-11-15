@@ -37,7 +37,11 @@ public sealed class OutlinedText : Control
     /// <param name="drawingContext">The WPF drawing target.</param>
     protected override void OnRender(DrawingContext drawingContext)
     {
-        var geometry = FormatText().BuildGeometry(new Point(OutlinePadding, OutlinePadding));
+        var text = FormatText();
+        var x = HorizontalContentAlignment == HorizontalAlignment.Right
+            ? ActualWidth - OutlinePadding - text.WidthIncludingTrailingWhitespace
+            : OutlinePadding;
+        var geometry = text.BuildGeometry(new Point(x, OutlinePadding));
         drawingContext.DrawGeometry(null, Outline, geometry);
         drawingContext.DrawGeometry(Foreground, null, geometry);
     }

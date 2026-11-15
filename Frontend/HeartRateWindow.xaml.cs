@@ -213,6 +213,7 @@ public sealed partial class HeartRateWindow : Window
             heartRight = overlayOptions.HeartRight,
             showTrend = overlayOptions.ShowTrend,
             showBackground = overlayOptions.ShowBackground,
+            hideBpm = overlayOptions.HideBpm,
             points = history.Select(sample => new
             {
                 bpm = sample.Bpm,
@@ -265,7 +266,7 @@ public sealed partial class HeartRateWindow : Window
         }
 
         overlay.ApplyOptions(options.HeartRight, options.ShowTrend,
-            options.ShowBackground, options.Locked);
+            options.ShowBackground, options.Locked, options.HideBpm);
         if (!overlay.IsVisible) overlay.Show();
         RenderTrend();
     }

@@ -90,7 +90,7 @@
                     <StackPanel>
                         <TextBlock Text="当前心率" FontWeight="SemiBold" />
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock x:Name="reading" Text="—" FontSize="55" FontWeight="Bold" />
+                            <TextBlock x:Name="reading" Text="—" Width="112" TextAlignment="Right" Typography.NumeralAlignment="Tabular" FontSize="55" FontWeight="Bold" />
                             <TextBlock Text="BPM" Margin="10,0,0,10" VerticalAlignment="Bottom" Foreground="#546681" />
                         </StackPanel>
                         <TextBlock x:Name="connectionState" Text="未连接设备" FontSize="19" FontWeight="Bold"

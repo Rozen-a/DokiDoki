@@ -16,11 +16,11 @@ body{font:700 238px "Segoe UI",sans-serif;color:#22354f}
 #reading.right{flex-direction:row-reverse}
 img{width:336px;height:336px;margin:0 -21px;image-rendering:pixelated}
 #rate{white-space:nowrap}
-#bpm{--outline:6px}
+#bpm{--outline:6px;width:3ch;text-align:right;font-variant-numeric:tabular-nums}
 #unit{--outline:2px}
 #bpm,#unit{text-shadow:var(--outline) 0 #fff,calc(-1 * var(--outline)) 0 #fff,0 var(--outline) #fff,0 calc(-1 * var(--outline)) #fff}
 #unit{font-size:77px;margin:0 0 42px 21px;align-self:flex-end;color:#394c68}
-svg{display:block;width:100%;height:100%;min-height:0;border-radius:28px}
+svg{display:block;justify-self:center;width:100%;max-width:100%;height:100%;min-height:0;border-radius:28px}
 svg.shaded{background:rgba(221,238,255,.61)}
 </style>
 </head>
@@ -35,6 +35,7 @@ svg.shaded{background:rgba(221,238,255,.61)}
 const overlay = document.querySelector('#overlay');
 const reading = document.querySelector('#reading');
 const bpm = document.querySelector('#bpm');
+const unit = document.querySelector('#unit');
 const chart = document.querySelector('#chart');
 const line = document.querySelector('#line');
 
@@ -75,6 +76,7 @@ async function refresh() {
     if (!response.ok) throw Error(response.status);
     const state = await response.json();
     bpm.textContent = state.bpm ?? '—';
+    unit.hidden = state.hideBpm === true;
     reading.classList.toggle('right', state.heartRight);
     chart.toggleAttribute('hidden', !state.showTrend);
     chart.classList.toggle('shaded', state.showBackground);
@@ -86,6 +88,8 @@ async function refresh() {
        4 + 25 * (ceiling - point.bpm) / (ceiling - floor)].join(',')
     ).join(' '));
     overlay.hidden = false;
+    // Match the reading row after the BPM unit has entered or left the layout.
+    chart.style.width = reading.getBoundingClientRect().width + 'px';
     setTempo(state.pulseTempo || 0);
   } catch {
     overlay.hidden = true;

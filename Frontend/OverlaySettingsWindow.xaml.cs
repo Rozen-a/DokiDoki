@@ -7,7 +7,7 @@ namespace DokiDoki.Frontend;
 
 /// <summary>Stores the floating-window display options for the current application session.</summary>
 internal record OverlayOptions(bool Enabled = false, bool HeartRight = false,
-    bool ShowTrend = true, bool ShowBackground = true, bool Locked = false, bool Capture = false);
+    bool ShowTrend = true, bool ShowBackground = true, bool Locked = false, bool Capture = false, bool HideBpm = false);
 
 /// <summary>Applies floating-window settings as the user changes each option.</summary>
 public sealed partial class OverlaySettingsWindow : Window
@@ -26,10 +26,11 @@ public sealed partial class OverlaySettingsWindow : Window
         locked.IsChecked = options.Locked;
 
         capture.IsChecked = options.Capture;
+        hideBpm.IsChecked = options.HideBpm;
         captureAddress.Text = ObsCaptureServer.Address;
         RefreshCaptureControls();
 
-        foreach (var option in new[] { enabled, showTrend, showBackground, locked, capture })
+        foreach (var option in new[] { enabled, showTrend, showBackground, locked, capture, hideBpm })
         {
             option.Checked += Apply;
             option.Unchecked += Apply;
@@ -43,7 +44,7 @@ public sealed partial class OverlaySettingsWindow : Window
         {
             var snapshot = new OverlayOptions(enabled.IsChecked == true, heartRight.IsChecked == true,
                 showTrend.IsChecked == true, showBackground.IsChecked == true, locked.IsChecked == true,
-                capture.IsChecked == true);
+                capture.IsChecked == true, hideBpm.IsChecked == true);
             captureError.Text = "";
             try { apply(snapshot); }
             catch (System.Net.HttpListenerException error)

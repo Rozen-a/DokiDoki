@@ -18,8 +18,8 @@
             <local:PulsingHeart x:Name="heart" Width="40" Height="40" Margin="-3,0" Source="/Frontend/Assets/Heart.png"
                    RenderOptions.BitmapScalingMode="NearestNeighbor" />
             <StackPanel x:Name="rate" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                <local:OutlinedText x:Name="bpmText" Text="—" Foreground="#22354F" FontSize="34" FontWeight="Bold" />
-                <local:OutlinedText Text="BPM" Foreground="#394C68" FontSize="11" FontWeight="SemiBold"
+                <local:OutlinedText x:Name="bpmText" Text="—" Width="68" HorizontalContentAlignment="Right" Foreground="#22354F" FontSize="34" FontWeight="Bold" />
+                <local:OutlinedText x:Name="bpmUnit" Text="BPM" Foreground="#394C68" FontSize="11" FontWeight="SemiBold"
                            VerticalAlignment="Bottom" Margin="0,0,0,7" />
             </StackPanel>
         </Grid>

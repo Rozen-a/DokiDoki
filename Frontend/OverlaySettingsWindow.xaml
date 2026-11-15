@@ -111,20 +111,22 @@
                         <ColumnDefinition Width="6" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <RadioButton x:Name="heartRight" Content="爱心右置" GroupName="OverlayLayout" />
-                        <RadioButton x:Name="rateRight" Content="心率右置" GroupName="OverlayLayout" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="2">
-                        <CheckBox x:Name="showTrend" Content="显示波动" />
-                        <CheckBox x:Name="showBackground"
-                                  IsEnabled="{Binding IsChecked, ElementName=showTrend}" AutomationProperties.Name="波动半透明背景">
-                            <TextBlock Text="波动半透明背景" TextWrapping="NoWrap" />
-                        </CheckBox>
-                    </StackPanel>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <RadioButton x:Name="heartRight" Content="爱心右置" GroupName="OverlayLayout" />
+                    <RadioButton x:Name="rateRight" Grid.Row="1" Content="心率右置" GroupName="OverlayLayout" />
+                    <CheckBox x:Name="locked" Grid.Row="2" Content="位置锁定"
+                              IsEnabled="{Binding IsChecked, ElementName=enabled}" />
+                    <CheckBox x:Name="showTrend" Grid.Column="2" Content="显示波动" />
+                    <CheckBox x:Name="showBackground" Grid.Row="1" Grid.Column="2"
+                              IsEnabled="{Binding IsChecked, ElementName=showTrend}" AutomationProperties.Name="波动半透明背景">
+                        <TextBlock Text="波动半透明背景" TextWrapping="NoWrap" />
+                    </CheckBox>
+                    <CheckBox x:Name="hideBpm" Grid.Row="2" Grid.Column="2" Content="隐藏 BPM" />
                 </Grid>
-                <CheckBox x:Name="locked" Content="位置锁定" HorizontalAlignment="Stretch"
-                          IsEnabled="{Binding IsChecked, ElementName=enabled}" />
             </StackPanel>
         </Border>
     </StackPanel>

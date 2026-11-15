@@ -48,7 +48,8 @@ public sealed partial class HeartRateOverlay : Window
     /// <param name="showTrend">Shows the rolling heart-rate chart when true.</param>
     /// <param name="showBackground">Shows a translucent chart background when true.</param>
     /// <param name="locked">Prevents the window from being moved when true.</param>
-    internal void ApplyOptions(bool heartOnRight, bool showTrend, bool showBackground, bool locked)
+    /// <param name="hideBpm">Hides the BPM unit and releases its layout space when true.</param>
+    internal void ApplyOptions(bool heartOnRight, bool showTrend, bool showBackground, bool locked, bool hideBpm)
     {
         Grid.SetColumn(heart, heartOnRight ? 2 : 0);
         Grid.SetColumn(rate, heartOnRight ? 0 : 2);
@@ -56,6 +57,7 @@ public sealed partial class HeartRateOverlay : Window
         trendPanel.Background = showBackground
             ? new SolidColorBrush(Color.FromArgb(156, 221, 238, 255))
             : Brushes.Transparent;
+        bpmUnit.Visibility = hideBpm ? Visibility.Collapsed : Visibility.Visible;
         positionLocked = locked;
         ApplyInputStyle();
         Cursor = locked ? Cursors.Arrow : Cursors.SizeAll;
