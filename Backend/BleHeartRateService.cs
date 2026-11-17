@@ -41,8 +41,9 @@ internal sealed class BleHeartRateService : IDisposable
 
     /// <summary>Scans for nearby BLE devices and sorts heart-rate candidates first.</summary>
     /// <param name="cancellationToken">Stops the discovery session.</param>
+    /// <param name="scanMilliseconds">Time spent collecting advertisements for this scan.</param>
     /// <returns>A snapshot of discovered devices.</returns>
-    internal static async Task<List<Candidate>> ScanAsync(CancellationToken cancellationToken = default)
+    internal static async Task<List<Candidate>> ScanAsync(CancellationToken cancellationToken = default, int scanMilliseconds = 8000)
     {
         var watcher = new BluetoothLEAdvertisementWatcher { ScanningMode = BluetoothLEScanningMode.Active };
         var seen = new Dictionary<ulong, Candidate>();
@@ -67,7 +68,7 @@ internal sealed class BleHeartRateService : IDisposable
         try
         {
             watcher.Start();
-            await Task.WhenAny(stopped.Task, Task.Delay(8000, cancellationToken));
+            await Task.WhenAny(stopped.Task, Task.Delay(scanMilliseconds, cancellationToken));
             cancellationToken.ThrowIfCancellationRequested();
             watcher.Stop();
             await Task.WhenAny(stopped.Task, Task.Delay(500));

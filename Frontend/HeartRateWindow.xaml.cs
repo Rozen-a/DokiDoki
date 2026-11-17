@@ -47,6 +47,7 @@ public sealed partial class HeartRateWindow : Window
             args.Cancel = true;
             scanStatus.Text = "正在结束蓝牙操作…";
         };
+        Closing += (_, args) => { if (!args.Cancel) SaveOverlayPosition(); };
         Closed += (_, _) =>
         {
             toastTimer.Stop();
@@ -73,7 +74,18 @@ public sealed partial class HeartRateWindow : Window
         Loaded += async (_, _) =>
         {
             var preferences = RecentDevice.LoadOptions();
-            overlayOptions = overlayOptions with { StartupConnect = preferences.Startup, Reconnect = preferences.Reconnect };
+            var saved = RecentDevice.LoadSettings(overlayOptions with
+            {
+                StartupConnect = preferences.Startup,
+                Reconnect = preferences.Reconnect
+            });
+            try { ApplyOverlayOptions(saved); }
+            catch (System.Net.HttpListenerException error)
+            {
+                ApplyOverlayOptions(saved with { Capture = false });
+                RecentDevice.SaveSettings(saved);
+                ShowToast("无法恢复直播采集：" + error.Message, warning: true);
+            }
             rememberedAddress = RecentDevice.Load();
             if (overlayOptions.StartupConnect && rememberedAddress.HasValue) await AutoConnectAsync(rememberedAddress.Value, reconnect: false);
         };
@@ -241,7 +253,7 @@ public sealed partial class HeartRateWindow : Window
                 attempt.Token.ThrowIfCancellationRequested();
                 try
                 {
-                    var results = await BleHeartRateService.ScanAsync(attempt.Token);
+                    var results = await BleHeartRateService.ScanAsync(attempt.Token, scanMilliseconds: 3000);
                     var candidate = results.FirstOrDefault(item => item.Address == address);
                     if (candidate != null)
                     {
@@ -253,7 +265,7 @@ public sealed partial class HeartRateWindow : Window
                 {
                     ClearFailedAttempt();
                 }
-                await Task.Delay(TimeSpan.FromSeconds(1), attempt.Token);
+                await Task.Delay(250, attempt.Token);
             }
         }
         catch (OperationCanceledException)
@@ -396,8 +408,9 @@ public sealed partial class HeartRateWindow : Window
             obsCapture = null;
         }
 
-        if (overlayOptions.StartupConnect != options.StartupConnect || overlayOptions.Reconnect != options.Reconnect)
-            RecentDevice.SaveOptions(options.StartupConnect, options.Reconnect);
+        if (overlay != null && double.IsFinite(overlay.Left) && double.IsFinite(overlay.Top))
+            options = options with { OverlayLeft = overlay.Left, OverlayTop = overlay.Top };
+        if (overlayOptions != options) RecentDevice.SaveSettings(options);
         overlayOptions = options;
         desktopToggle.Content = options.Enabled ? "桌面悬浮窗 · 开" : "桌面悬浮窗";
         captureToggle.Content = options.Capture ? "直播采集 · 开" : "直播采集";
@@ -415,6 +428,17 @@ public sealed partial class HeartRateWindow : Window
         {
             // Keep the overlay independent of minimization. Closed handles its lifetime.
             overlay = new HeartRateOverlay();
+            if (options.OverlayLeft is double left && options.OverlayTop is double top &&
+                double.IsFinite(left) && double.IsFinite(top) &&
+                left >= SystemParameters.VirtualScreenLeft &&
+                left < SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - 30 &&
+                top >= SystemParameters.VirtualScreenTop &&
+                top < SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight - 30)
+            {
+                overlay.WindowStartupLocation = WindowStartupLocation.Manual;
+                overlay.Left = left;
+                overlay.Top = top;
+            }
             overlay.Closed += (_, _) => overlay = null;
         }
 
@@ -423,6 +447,14 @@ public sealed partial class HeartRateWindow : Window
         if (!overlay.IsVisible) overlay.Show();
         if (toast.Visibility == Visibility.Visible && toastMessage.Foreground == System.Windows.Media.Brushes.DarkRed) overlay.ShowNotice(toastMessage.Text);
         RenderTrend();
+    }
+
+    /// <summary>Persists the current floating window position before orderly shutdown.</summary>
+    private void SaveOverlayPosition()
+    {
+        if (overlay == null || !double.IsFinite(overlay.Left) || !double.IsFinite(overlay.Top)) return;
+        overlayOptions = overlayOptions with { OverlayLeft = overlay.Left, OverlayTop = overlay.Top };
+        RecentDevice.SaveSettings(overlayOptions);
     }
 
     /// <summary>Reads a static resource for the local OBS browser page.</summary>

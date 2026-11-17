@@ -2,6 +2,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Text.Json;
 
 namespace DokiDoki.Backend;
 
@@ -43,11 +44,24 @@ internal static class RecentDevice
         catch (UnauthorizedAccessException) { return (true, true); }
     }
 
-    /// <summary>Saves the two connection preferences locally.</summary>
-    /// <param name="startup">Whether to connect on launch.</param>
-    /// <param name="reconnect">Whether to recover an interrupted connection.</param>
-    internal static void SaveOptions(bool startup, bool reconnect) =>
-        Write(PreferencesPath, (startup ? "1" : "0") + (reconnect ? "1" : "0"));
+    private static readonly string SettingsPath = Path.Combine(Path.GetDirectoryName(FilePath), "settings.json");
+
+    /// <summary>Reads the saved settings or falls back to the supplied defaults.</summary>
+    /// <typeparam name="T">The settings snapshot type.</typeparam>
+    /// <param name="fallback">Defaults, including any migrated connection preferences.</param>
+    /// <returns>The saved or default snapshot.</returns>
+    internal static T LoadSettings<T>(T fallback) where T : class
+    {
+        try { return JsonSerializer.Deserialize<T>(File.ReadAllText(SettingsPath)) ?? fallback; }
+        catch (IOException) { return fallback; }
+        catch (UnauthorizedAccessException) { return fallback; }
+        catch (JsonException) { return fallback; }
+    }
+
+    /// <summary>Saves the complete settings snapshot locally.</summary>
+    /// <typeparam name="T">The settings snapshot type.</typeparam>
+    /// <param name="settings">The latest settings.</param>
+    internal static void SaveSettings<T>(T settings) => Write(SettingsPath, JsonSerializer.Serialize(settings));
 
     /// <summary>Atomically replaces one local settings file.</summary>
     /// <param name="path">The destination file.</param>

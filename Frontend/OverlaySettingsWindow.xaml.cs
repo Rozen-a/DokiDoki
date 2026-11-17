@@ -5,9 +5,9 @@ using DokiDoki.Backend;
 
 namespace DokiDoki.Frontend;
 
-/// <summary>Stores the floating-window display options for the current application session.</summary>
+/// <summary>Stores the floating-window display options between application sessions.</summary>
 internal record OverlayOptions(bool Enabled = false, bool HeartRight = false,
-    bool ShowTrend = true, bool ShowBackground = true, bool Locked = false, bool Capture = false, bool HideBpm = false, bool StartupConnect = true, bool Reconnect = true);
+    bool ShowTrend = true, bool ShowBackground = true, bool Locked = false, bool Capture = false, bool HideBpm = false, bool StartupConnect = true, bool Reconnect = true, double? OverlayLeft = null, double? OverlayTop = null);
 
 /// <summary>Applies floating-window settings as the user changes each option.</summary>
 public sealed partial class OverlaySettingsWindow : Window
