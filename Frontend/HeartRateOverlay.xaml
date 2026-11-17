@@ -30,5 +30,10 @@
                            VerticalAlignment="Center" HorizontalAlignment="Center" />
             </Grid>
         </Border>
+        <Border x:Name="notice" Visibility="Collapsed" Background="#FFF2D6" CornerRadius="8"
+                Padding="6,3" Margin="2,4" Width="130" IsHitTestVisible="False">
+            <TextBlock x:Name="noticeText" FontSize="11" FontWeight="Bold" TextWrapping="Wrap"
+                       Foreground="#702B29" AutomationProperties.LiveSetting="Assertive" />
+        </Border>
     </StackPanel>
 </Window>

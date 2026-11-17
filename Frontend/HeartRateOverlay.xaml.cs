@@ -77,6 +77,14 @@ public sealed partial class HeartRateOverlay : Window
         DrawTrend();
     }
 
+    /// <summary>Mirrors a transient connection alert while the overlay is enabled.</summary>
+    /// <param name="message">Alert text, or null to hide it.</param>
+    internal void ShowNotice(string message)
+    {
+        noticeText.Text = message ?? "";
+        notice.Visibility = message == null ? Visibility.Collapsed : Visibility.Visible;
+    }
+
     /// <summary>Redraws the trend when data or the canvas bounds change.</summary>
     private void DrawTrend()
     {

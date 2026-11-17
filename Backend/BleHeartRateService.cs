@@ -1,6 +1,7 @@
 // Windows BLE discovery and heart-rate subscription, independent of WPF.
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.Advertisement;
@@ -39,8 +40,9 @@ internal sealed class BleHeartRateService : IDisposable
     }
 
     /// <summary>Scans for nearby BLE devices and sorts heart-rate candidates first.</summary>
+    /// <param name="cancellationToken">Stops the discovery session.</param>
     /// <returns>A snapshot of discovered devices.</returns>
-    internal static async Task<List<Candidate>> ScanAsync()
+    internal static async Task<List<Candidate>> ScanAsync(CancellationToken cancellationToken = default)
     {
         var watcher = new BluetoothLEAdvertisementWatcher { ScanningMode = BluetoothLEScanningMode.Active };
         var seen = new Dictionary<ulong, Candidate>();
@@ -65,7 +67,8 @@ internal sealed class BleHeartRateService : IDisposable
         try
         {
             watcher.Start();
-            await Task.WhenAny(stopped.Task, Task.Delay(8000));
+            await Task.WhenAny(stopped.Task, Task.Delay(8000, cancellationToken));
+            cancellationToken.ThrowIfCancellationRequested();
             watcher.Stop();
             await Task.WhenAny(stopped.Task, Task.Delay(500));
             if (stopped.Task.IsCompleted && stopped.Task.Result != BluetoothError.Success)
@@ -94,25 +97,29 @@ internal sealed class BleHeartRateService : IDisposable
     /// <summary>Performs GATT discovery and subscription on a worker thread.</summary>
     /// <param name="candidate">The selected BLE advertisement.</param>
     /// <param name="onReading">Receives each valid BPM on the Bluetooth callback thread.</param>
+    /// <param name="cancellationToken">Stops the Windows Bluetooth operations.</param>
     /// <returns>A task that completes when notifications are enabled.</returns>
-    internal async Task SubscribeAsync(Candidate candidate, Action<int> onReading)
+    internal async Task SubscribeAsync(Candidate candidate, Action<int> onReading, CancellationToken cancellationToken = default)
     {
-        device = await BleMeasurement.WaitForAsync(BluetoothLEDevice.FromBluetoothAddressAsync(candidate.Address, candidate.AddressType));
+        // Forward cancellation to Windows so the reconnect deadline also bounds GATT calls.
+        Task<T> Await<T>(Windows.Foundation.IAsyncOperation<T> operation) => operation.AsTask(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        device = await Await(BluetoothLEDevice.FromBluetoothAddressAsync(candidate.Address, candidate.AddressType));
         if (device == null)
-            device = await BleMeasurement.WaitForAsync(BluetoothLEDevice.FromBluetoothAddressAsync(candidate.Address));
+            device = await Await(BluetoothLEDevice.FromBluetoothAddressAsync(candidate.Address));
         if (device == null)
         {
-            var matches = await BleMeasurement.WaitForAsync(DeviceInformation.FindAllAsync(
+            var matches = await Await(DeviceInformation.FindAllAsync(
                 BluetoothLEDevice.GetDeviceSelectorFromBluetoothAddress(candidate.Address)));
             foreach (var match in matches)
             {
-                device = await BleMeasurement.WaitForAsync(BluetoothLEDevice.FromIdAsync(match.Id));
+                device = await Await(BluetoothLEDevice.FromIdAsync(match.Id));
                 if (device != null) break;
             }
         }
         if (device == null) throw new InvalidOperationException("无法打开设备，请重新扫描");
 
-        var services = await BleMeasurement.WaitForAsync(device.GetGattServicesForUuidAsync(GattServiceUuids.HeartRate, BluetoothCacheMode.Uncached));
+        var services = await Await(device.GetGattServicesForUuidAsync(GattServiceUuids.HeartRate, BluetoothCacheMode.Uncached));
         foreach (var item in services.Services)
         {
             if (service == null) service = item;
@@ -120,13 +127,13 @@ internal sealed class BleHeartRateService : IDisposable
         }
         if (services.Status != GattCommunicationStatus.Success || service == null)
             throw new InvalidOperationException("无法读取心率服务：" + services.Status);
-        var result = await BleMeasurement.WaitForAsync(service.GetCharacteristicsForUuidAsync(
+        var result = await Await(service.GetCharacteristicsForUuidAsync(
             GattCharacteristicUuids.HeartRateMeasurement, BluetoothCacheMode.Uncached));
         if (result.Status == GattCommunicationStatus.AccessDenied)
         {
-            var access = await BleMeasurement.WaitForAsync(service.RequestAccessAsync());
+            var access = await Await(service.RequestAccessAsync());
             if (access == DeviceAccessStatus.Allowed)
-                result = await BleMeasurement.WaitForAsync(service.GetCharacteristicsForUuidAsync(
+                result = await Await(service.GetCharacteristicsForUuidAsync(
                     GattCharacteristicUuids.HeartRateMeasurement, BluetoothCacheMode.Uncached));
         }
         if (result.Status != GattCommunicationStatus.Success || result.Characteristics.Count == 0)
@@ -137,7 +144,7 @@ internal sealed class BleHeartRateService : IDisposable
         handler = (sender, args) => ReceiveHeartRate(args, onReading);
         measurement.ValueChanged += handler;
 
-        var subscribed = await BleMeasurement.WaitForAsync(measurement.WriteClientCharacteristicConfigurationDescriptorAsync(
+        var subscribed = await Await(measurement.WriteClientCharacteristicConfigurationDescriptorAsync(
             GattClientCharacteristicConfigurationDescriptorValue.Notify));
         if (subscribed != GattCommunicationStatus.Success)
             throw new InvalidOperationException("无法订阅心率：" + subscribed);

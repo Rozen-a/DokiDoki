@@ -25,9 +25,6 @@
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="surface" Property="BorderBrush" Value="#9DBEE4" />
                             </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="surface" Property="BorderBrush" Value="#54769D" />
-                            </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="surface" Property="Opacity" Value="0.75" />
                             </Trigger>
@@ -46,20 +43,16 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="row" Background="#F2F8FF" CornerRadius="12"
+                        <Border x:Name="row" Background="#F2F8FF" CornerRadius="12" BorderBrush="Transparent" BorderThickness="1"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="row" Property="Background" Value="#E1EEFF" />
+                                <Setter TargetName="row" Property="BorderBrush" Value="#9DBEE4" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="row" Property="Background" Value="#FBE0ED" />
-                            </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="row" Property="BorderBrush" Value="#54769D" />
-                                <Setter TargetName="row" Property="BorderThickness" Value="1" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -134,8 +127,16 @@
                 <Button x:Name="disconnect" Content="断开连接" Margin="6,0,0,0" Background="#FBE0ED"
                         IsEnabled="False" Click="DisconnectClick" />
             </UniformGrid>
-                <Button Content="悬浮窗设置" HorizontalAlignment="Stretch" Margin="0,10,0,0"
-                        Background="White" Click="OpenOverlaySettingsClick" />
+                <UniformGrid Columns="3" Margin="0,10,0,0">
+                    <Button x:Name="desktopToggle" Content="桌面悬浮窗" Background="{StaticResource OptionIdleBrush}" Padding="8,10" Click="ToggleDesktopClick" Margin="0,0,4,0" />
+                    <DockPanel Margin="4,0">
+                        <Label DockPanel.Dock="Right" Style="{StaticResource HelpBadgeStyle}" AutomationProperties.Name="使用说明">
+                            <Label.ToolTip><ToolTip><TextBlock MaxWidth="270" TextWrapping="Wrap" Text="打开设置中的「直播」页，复制链接到 OBS 浏览器来源，尺寸设为 960 × 720。" /></ToolTip></Label.ToolTip>
+                        </Label>
+                        <Button x:Name="captureToggle" Content="直播采集" Background="{StaticResource OptionIdleBrush}" Padding="8,10" Click="ToggleCaptureClick" />
+                    </DockPanel>
+                    <Button Content="设置" Click="OpenOverlaySettingsClick" Margin="4,0,0,0" />
+                </UniformGrid>
             </StackPanel>
         </Grid>
 

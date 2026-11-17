@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -27,6 +28,9 @@ public sealed partial class HeartRateWindow : Window
     private readonly BleHeartRateService bluetooth = new();
     private double lastReading;
     private int connectionVersion;
+    private CancellationTokenSource autoConnect;
+    private ulong? rememberedAddress;
+    private bool reconnecting;
     private bool busy;
     private bool connected;
     private bool closeRequested;
@@ -39,6 +43,7 @@ public sealed partial class HeartRateWindow : Window
         {
             if (!busy) return;
             closeRequested = true;
+            autoConnect?.Cancel();
             args.Cancel = true;
             scanStatus.Text = "正在结束蓝牙操作…";
         };
@@ -53,9 +58,9 @@ public sealed partial class HeartRateWindow : Window
         timer.Tick += (_, _) =>
         {
             if (bluetooth.IsDisconnected)
-                Disconnect("设备已断开，请重新连接。");
+                _ = RecoverConnectionAsync("设备已断开");
             else if (clock.Elapsed.TotalSeconds - lastReading >= 15)
-                Disconnect("心率数据已中断，请检查手环广播。");
+                _ = RecoverConnectionAsync("心率数据已中断");
             else
                 RenderTrend();
         };
@@ -63,6 +68,14 @@ public sealed partial class HeartRateWindow : Window
         {
             toastTimer.Stop();
             toast.Visibility = Visibility.Collapsed;
+            overlay?.ShowNotice(null);
+        };
+        Loaded += async (_, _) =>
+        {
+            var preferences = RecentDevice.LoadOptions();
+            overlayOptions = overlayOptions with { StartupConnect = preferences.Startup, Reconnect = preferences.Reconnect };
+            rememberedAddress = RecentDevice.Load();
+            if (overlayOptions.StartupConnect && rememberedAddress.HasValue) await AutoConnectAsync(rememberedAddress.Value, reconnect: false);
         };
         RefreshButtons();
     }
@@ -104,7 +117,16 @@ public sealed partial class HeartRateWindow : Window
     /// <summary>Ends the active connection and clears displayed readings.</summary>
     /// <param name="sender">The disconnect button.</param>
     /// <param name="args">The WPF click event.</param>
-    private void DisconnectClick(object sender, RoutedEventArgs args) => Disconnect("已断开连接。");
+    private void DisconnectClick(object sender, RoutedEventArgs args)
+    {
+        if (autoConnect != null)
+        {
+            autoConnect.Cancel();
+            disconnect.IsEnabled = false;
+            return;
+        }
+        Disconnect("已断开连接。");
+    }
 
     /// <summary>Reflows the trend when the chart changes size.</summary>
     /// <param name="sender">The chart canvas.</param>
@@ -123,7 +145,7 @@ public sealed partial class HeartRateWindow : Window
     private void RefreshButtons()
     {
         openDevices.IsEnabled = !busy && !connected;
-        disconnect.IsEnabled = !busy && connected;
+        disconnect.IsEnabled = autoConnect != null || (!busy && connected);
         back.IsEnabled = rescan.IsEnabled = devices.IsEnabled = !busy;
         connect.IsEnabled = !busy && devices.SelectedItem != null;
     }
@@ -156,26 +178,130 @@ public sealed partial class HeartRateWindow : Window
         busy = true;
         RefreshButtons();
         scanStatus.Text = "正在连接并订阅心率…";
-        try
-        {
-            var version = ++connectionVersion;
-            await Task.Run(() => bluetooth.SubscribeAsync(candidate, bpm => ShowHeartRate(bpm, version)));
-            connected = true;
-            connectionState.Text = "已连接 · " + (string.IsNullOrWhiteSpace(candidate.Name) ? candidate.ToString() : candidate.Name);
-            dashboardMessage.Text = history.Count == 0 ? "等待设备发送心率…" : "正在接收心率";
-            lastReading = clock.Elapsed.TotalSeconds;
-            ShowDashboard();
-            toastMessage.Text = "已连接 · " + (candidate.Name ?? "蓝牙设备");
-            toast.Visibility = Visibility.Visible;
-            toastTimer.Start();
-            timer.Start();
-        }
+        try { await SubscribeAsync(candidate, CancellationToken.None); }
         catch (Exception error)
         {
             Disconnect("连接未完成。");
             scanStatus.Text = "连接失败：" + error.Message;
         }
         finally { FinishOperation(); }
+    }
+
+    /// <summary>Subscribes to one device and remembers it after successful connection.</summary>
+    /// <param name="candidate">The device to connect.</param>
+    /// <param name="token">Cancels an automatic connection attempt.</param>
+    /// <returns>A task completing when the connection is ready.</returns>
+    private async Task SubscribeAsync(BleHeartRateService.Candidate candidate, CancellationToken token)
+    {
+        var version = ++connectionVersion;
+        await Task.Run(() => bluetooth.SubscribeAsync(candidate, bpm => ShowHeartRate(bpm, version), token), token);
+        token.ThrowIfCancellationRequested();
+        rememberedAddress = candidate.Address;
+        RecentDevice.Save(candidate.Address);
+        connected = true;
+        connectionState.Text = "已连接 · " + (string.IsNullOrWhiteSpace(candidate.Name) ? candidate.ToString() : candidate.Name);
+        dashboardMessage.Text = history.Count == 0 ? "等待设备发送心率…" : "正在接收心率";
+        lastReading = clock.Elapsed.TotalSeconds;
+        ShowDashboard();
+        ShowToast("已连接 · " + (candidate.Name ?? "蓝牙设备"));
+        timer.Start();
+    }
+
+    /// <summary>Clears the lost connection, displays an alert, and starts retrying.</summary>
+    /// <param name="reason">Reason that the current data stream stopped.</param>
+    /// <returns>A task completing when automatic reconnection ends.</returns>
+    private async Task RecoverConnectionAsync(string reason)
+    {
+        Disconnect(reason);
+        var retry = overlayOptions.Reconnect && rememberedAddress.HasValue;
+        ShowToast(retry ? reason + "，正在重连" : reason, warning: true, persistent: retry);
+        if (retry) await AutoConnectAsync(rememberedAddress.Value, reconnect: true);
+    }
+
+    /// <summary>Polls until startup connects, or retries an interrupted session for two minutes.</summary>
+    /// <param name="address">The only BLE address eligible for automatic connection.</param>
+    /// <param name="reconnect">True for recovery of a lost session.</param>
+    /// <returns>A task completing on connection, cancellation or timeout.</returns>
+    private async Task AutoConnectAsync(ulong address, bool reconnect)
+    {
+        using var stop = new CancellationTokenSource();
+        using var deadline = new CancellationTokenSource();
+        if (reconnect) deadline.CancelAfter(TimeSpan.FromMinutes(2));
+        reconnecting = reconnect;
+        using var attempt = CancellationTokenSource.CreateLinkedTokenSource(stop.Token, deadline.Token);
+        autoConnect = stop;
+        busy = true;
+        connectionState.Text = reconnect ? "正在重连" : "自动连接中";
+        dashboardMessage.Text = "正在搜索上次连接的设备。";
+        RefreshButtons();
+        try
+        {
+            while (true)
+            {
+                attempt.Token.ThrowIfCancellationRequested();
+                try
+                {
+                    var results = await BleHeartRateService.ScanAsync(attempt.Token);
+                    var candidate = results.FirstOrDefault(item => item.Address == address);
+                    if (candidate != null)
+                    {
+                        await SubscribeAsync(candidate, attempt.Token);
+                        return;
+                    }
+                }
+                catch (Exception error) when (error is not OperationCanceledException)
+                {
+                    ClearFailedAttempt();
+                }
+                await Task.Delay(TimeSpan.FromSeconds(1), attempt.Token);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            ClearFailedAttempt();
+            connectionState.Text = "已关闭自动连接";
+            dashboardMessage.Text = "可点击「连接设备」手动连接。";
+            if (!stop.IsCancellationRequested)
+                ShowToast("自动连接超时，已停止重连", warning: true);
+            else
+            {
+                toast.Visibility = Visibility.Collapsed;
+                overlay?.ShowNotice(null);
+            }
+        }
+        finally
+        {
+            autoConnect = null;
+            reconnecting = false;
+            FinishOperation();
+        }
+    }
+
+    /// <summary>Releases a partial subscription without interrupting the retry indicator or alerts.</summary>
+    private void ClearFailedAttempt()
+    {
+        connectionVersion++;
+        bluetooth.Dispose();
+        history.Clear();
+        reading.Text = "—";
+        dashboardHeart.SetRate(0);
+        RenderTrend();
+    }
+
+    /// <summary>Shows a non-modal status message and mirrors warnings to the desktop overlay.</summary>
+    /// <param name="message">Text shown in the alert.</param>
+    /// <param name="warning">Whether to highlight and mirror this message.</param>
+    /// <param name="persistent">Keeps the notice visible until replaced or cleared.</param>
+    private void ShowToast(string message, bool warning = false, bool persistent = false)
+    {
+        toastTimer.Stop();
+        toastTimer.Interval = TimeSpan.FromSeconds(warning ? 7 : 3);
+        toast.Background = warning ? System.Windows.Media.Brushes.MistyRose : System.Windows.Media.Brushes.LavenderBlush;
+        toastMessage.Foreground = warning ? System.Windows.Media.Brushes.DarkRed : System.Windows.Media.Brushes.Black;
+        toastMessage.Text = message;
+        toast.Visibility = Visibility.Visible;
+        overlay?.ShowNotice(warning ? message : null);
+        if (!persistent) toastTimer.Start();
     }
 
     /// <summary>Queues a BPM update and discards notifications from closed sessions.</summary>
@@ -233,9 +359,29 @@ public sealed partial class HeartRateWindow : Window
             return;
         }
 
-        overlaySettings = new OverlaySettingsWindow(overlayOptions, ApplyOverlayOptions) { Owner = this };
+        overlaySettings = new OverlaySettingsWindow(overlayOptions, options => ApplyOverlayOptions(options with { Enabled = overlayOptions.Enabled, Capture = overlayOptions.Capture })) { Owner = this };
         overlaySettings.Closed += (_, _) => overlaySettings = null;
         overlaySettings.Show();
+    }
+
+    /// <summary>Toggles the desktop overlay independently of capture.</summary>
+    /// <param name="sender">The desktop toggle.</param>
+    /// <param name="args">The WPF click event.</param>
+    private void ToggleDesktopClick(object sender, RoutedEventArgs args)
+    {
+        ApplyOverlayOptions(overlayOptions with { Enabled = !overlayOptions.Enabled });
+    }
+
+    /// <summary>Toggles browser capture and reports listener errors without blocking the UI.</summary>
+    /// <param name="sender">The capture toggle.</param>
+    /// <param name="args">The WPF click event.</param>
+    private void ToggleCaptureClick(object sender, RoutedEventArgs args)
+    {
+        try { ApplyOverlayOptions(overlayOptions with { Capture = !overlayOptions.Capture }); }
+        catch (System.Net.HttpListenerException error)
+        {
+            if (!reconnecting) ShowToast("无法开启直播采集：" + error.Message, warning: true);
+        }
     }
 
     /// <summary>Applies settings immediately and updates the floating window with the current reading.</summary>
@@ -250,7 +396,14 @@ public sealed partial class HeartRateWindow : Window
             obsCapture = null;
         }
 
+        if (overlayOptions.StartupConnect != options.StartupConnect || overlayOptions.Reconnect != options.Reconnect)
+            RecentDevice.SaveOptions(options.StartupConnect, options.Reconnect);
         overlayOptions = options;
+        desktopToggle.Content = options.Enabled ? "桌面悬浮窗 · 开" : "桌面悬浮窗";
+        captureToggle.Content = options.Capture ? "直播采集 · 开" : "直播采集";
+        desktopToggle.Background = options.Enabled ? (System.Windows.Media.Brush)FindResource("OptionActiveBrush") : (System.Windows.Media.Brush)FindResource("OptionIdleBrush");
+        captureToggle.Background = options.Capture ? (System.Windows.Media.Brush)FindResource("OptionActiveBrush") : (System.Windows.Media.Brush)FindResource("OptionIdleBrush");
+        if (autoConnect != null && !(reconnecting ? options.Reconnect : options.StartupConnect)) autoConnect.Cancel();
         if (!options.Enabled)
         {
             overlay?.Hide();
@@ -268,6 +421,7 @@ public sealed partial class HeartRateWindow : Window
         overlay.ApplyOptions(options.HeartRight, options.ShowTrend,
             options.ShowBackground, options.Locked, options.HideBpm);
         if (!overlay.IsVisible) overlay.Show();
+        if (toast.Visibility == Visibility.Visible && toastMessage.Foreground == System.Windows.Media.Brushes.DarkRed) overlay.ShowNotice(toastMessage.Text);
         RenderTrend();
     }
 
