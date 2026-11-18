@@ -29,21 +29,31 @@ public sealed partial class HeartRateWindow : Window
     private double lastReading;
     private int connectionVersion;
     private CancellationTokenSource autoConnect;
+    private TaskCompletionSource manualScanHandoff;
+    private CancellationTokenSource manualOperation;
+    private AutomaticSearch pausedSearch;
+    private TaskCompletionSource<bool> deviceDecision;
     private ulong? rememberedAddress;
     private bool reconnecting;
     private bool busy;
     private bool connected;
     private bool closeRequested;
 
+    /// <summary>Remembers the remaining time and completed prompts for a paused search.</summary>
+    private sealed record AutomaticSearch(ulong? Address, bool Reconnect, TimeSpan? Remaining, HashSet<ulong> Offered);
+
     /// <summary>Initializes both views and links timers to the connection lifecycle.</summary>
     public HeartRateWindow()
     {
         InitializeComponent();
+        acceptDevice.Click += (_, _) => deviceDecision?.TrySetResult(true);
+        declineDevice.Click += (_, _) => deviceDecision?.TrySetResult(false);
         Closing += (_, args) =>
         {
             if (!busy) return;
             closeRequested = true;
             autoConnect?.Cancel();
+            manualOperation?.Cancel();
             args.Cancel = true;
             scanStatus.Text = "正在结束蓝牙操作…";
         };
@@ -87,25 +97,64 @@ public sealed partial class HeartRateWindow : Window
                 ShowToast("无法恢复直播采集：" + error.Message, warning: true);
             }
             rememberedAddress = RecentDevice.Load();
-            if (overlayOptions.StartupConnect && rememberedAddress.HasValue) await AutoConnectAsync(rememberedAddress.Value, reconnect: false);
+            if (overlayOptions.StartupConnect) await AutoConnectAsync(rememberedAddress, reconnect: false);
         };
         RefreshButtons();
     }
 
-    /// <summary>Opens the device picker and automatically starts discovery.</summary>
+    /// <summary>Opens the picker and waits for automatic discovery to release Bluetooth.</summary>
     /// <param name="sender">The dashboard button.</param>
     /// <param name="args">The WPF click event.</param>
     private async void OpenDevicesClick(object sender, RoutedEventArgs args)
     {
+        if (!openDevices.IsEnabled) return;
+
         dashboard.Visibility = Visibility.Collapsed;
         devicePage.Visibility = Visibility.Visible;
+        if (autoConnect != null)
+        {
+            var handoff = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            manualScanHandoff = handoff;
+            scanStatus.Text = "正在暂停自动连接…";
+            autoConnect.Cancel();
+            await handoff.Task;
+            if (closeRequested)
+            {
+                if (busy) FinishOperation();
+                return;
+            }
+            if (devicePage.Visibility != Visibility.Visible)
+            {
+                await FinishManualOperationAsync();
+                return;
+            }
+        }
         await ScanAsync();
     }
 
-    /// <summary>Returns from the device picker to the dashboard.</summary>
+    /// <summary>Returns immediately and cancels any search or connection in the picker.</summary>
     /// <param name="sender">The back button.</param>
     /// <param name="args">The WPF click event.</param>
-    private void BackClick(object sender, RoutedEventArgs args) => ShowDashboard();
+    private async void BackClick(object sender, RoutedEventArgs args)
+    {
+        ShowDashboard();
+        manualOperation?.Cancel();
+        if (!busy) await ResumePausedSearchAsync();
+    }
+
+    /// <summary>Resumes a search once the picker has closed and Bluetooth is available.</summary>
+    /// <returns>A task completing when the resumed search ends.</returns>
+    private async Task ResumePausedSearchAsync()
+    {
+        var search = pausedSearch;
+        pausedSearch = null;
+        if (search == null || !(search.Reconnect ? overlayOptions.Reconnect : overlayOptions.StartupConnect))
+            return;
+
+        if (search.Reconnect)
+            ShowToast("正在重连", warning: true, persistent: true);
+        await RunAutomaticSearchAsync(search);
+    }
 
     /// <summary>Refreshes the devices discovered by the picker.</summary>
     /// <param name="sender">The rescan button.</param>
@@ -134,7 +183,7 @@ public sealed partial class HeartRateWindow : Window
         if (autoConnect != null)
         {
             autoConnect.Cancel();
-            disconnect.IsEnabled = false;
+            RefreshButtons();
             return;
         }
         Disconnect("已断开连接。");
@@ -156,9 +205,9 @@ public sealed partial class HeartRateWindow : Window
     /// <summary>Reflects active Bluetooth operations and selection in the controls.</summary>
     private void RefreshButtons()
     {
-        openDevices.IsEnabled = !busy && !connected;
-        disconnect.IsEnabled = autoConnect != null || (!busy && connected);
-        back.IsEnabled = rescan.IsEnabled = devices.IsEnabled = !busy;
+        openDevices.IsEnabled = !connected && (!busy || autoConnect is { IsCancellationRequested: false });
+        disconnect.IsEnabled = autoConnect is { IsCancellationRequested: false } || (!busy && connected);
+        rescan.IsEnabled = devices.IsEnabled = !busy;
         connect.IsEnabled = !busy && devices.SelectedItem != null;
     }
 
@@ -166,20 +215,26 @@ public sealed partial class HeartRateWindow : Window
     /// <returns>A task that completes when the search result or error is displayed.</returns>
     private async Task ScanAsync()
     {
+        using var stop = new CancellationTokenSource();
+        manualOperation = stop;
         busy = true;
         RefreshButtons();
         devices.ItemsSource = null;
         scanStatus.Text = "正在搜索附近蓝牙设备…";
         try
         {
-            var results = await BleHeartRateService.ScanAsync();
+            var results = await BleHeartRateService.ScanAsync(stop.Token);
+            stop.Token.ThrowIfCancellationRequested();
             devices.ItemsSource = results;
             scanStatus.Text = results.Count > 0
                 ? "请选择开启了心率广播的设备。"
                 : "未发现设备，请开启电脑蓝牙和手环心率广播后重试。";
         }
-        catch (Exception error) { scanStatus.Text = "搜索失败：" + error.Message; }
-        finally { FinishOperation(); }
+        catch (Exception error)
+        {
+            if (!stop.IsCancellationRequested) scanStatus.Text = "搜索失败：" + error.Message;
+        }
+        finally { await FinishManualOperationAsync(); }
     }
 
     /// <summary>Subscribes to the selected device and returns to the dashboard on success.</summary>
@@ -187,29 +242,50 @@ public sealed partial class HeartRateWindow : Window
     /// <returns>A task that completes after subscription or failure cleanup.</returns>
     private async Task ConnectAsync(BleHeartRateService.Candidate candidate)
     {
+        using var stop = new CancellationTokenSource();
+        manualOperation = stop;
         busy = true;
         RefreshButtons();
         scanStatus.Text = "正在连接并订阅心率…";
-        try { await SubscribeAsync(candidate, CancellationToken.None); }
+        try { await SubscribeAsync(candidate, stop.Token); }
         catch (Exception error)
         {
-            Disconnect("连接未完成。");
-            scanStatus.Text = "连接失败：" + error.Message;
+            Disconnect(stop.IsCancellationRequested ? "已取消手动连接。" : "连接未完成。");
+            if (!stop.IsCancellationRequested) scanStatus.Text = "连接失败：" + error.Message;
         }
-        finally { FinishOperation(); }
+        finally { await FinishManualOperationAsync(); }
+    }
+
+    /// <summary>Releases the picker's Bluetooth operation before any automatic search resumes.</summary>
+    /// <returns>A task completing after cleanup and any resumed search.</returns>
+    private async Task FinishManualOperationAsync()
+    {
+        manualOperation = null;
+        FinishOperation();
+        if (!closeRequested && devicePage.Visibility != Visibility.Visible)
+            await ResumePausedSearchAsync();
     }
 
     /// <summary>Subscribes to one device and remembers it after successful connection.</summary>
     /// <param name="candidate">The device to connect.</param>
-    /// <param name="token">Cancels an automatic connection attempt.</param>
+    /// <param name="token">Cancels the current connection attempt.</param>
     /// <returns>A task completing when the connection is ready.</returns>
-    private async Task SubscribeAsync(BleHeartRateService.Candidate candidate, CancellationToken token)
+    /// <param name="requireReading">Requires the first valid BPM before declaring an automatic connection ready.</param>
+    private async Task SubscribeAsync(BleHeartRateService.Candidate candidate, CancellationToken token, bool requireReading = false)
     {
         var version = ++connectionVersion;
-        await Task.Run(() => bluetooth.SubscribeAsync(candidate, bpm => ShowHeartRate(bpm, version), token), token);
+        var firstReading = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await Task.Run(() => bluetooth.SubscribeAsync(candidate, bpm =>
+        {
+            ShowHeartRate(bpm, version);
+            firstReading.TrySetResult();
+        }, token), token);
+        if (requireReading)
+            await firstReading.Task.WaitAsync(TimeSpan.FromSeconds(8), token);
         token.ThrowIfCancellationRequested();
         rememberedAddress = candidate.Address;
         RecentDevice.Save(candidate.Address);
+        pausedSearch = null;
         connected = true;
         connectionState.Text = "已连接 · " + (string.IsNullOrWhiteSpace(candidate.Name) ? candidate.ToString() : candidate.Name);
         dashboardMessage.Text = history.Count == 0 ? "等待设备发送心率…" : "正在接收心率";
@@ -230,22 +306,39 @@ public sealed partial class HeartRateWindow : Window
         if (retry) await AutoConnectAsync(rememberedAddress.Value, reconnect: true);
     }
 
-    /// <summary>Polls until startup connects, or retries an interrupted session for two minutes.</summary>
-    /// <param name="address">The only BLE address eligible for automatic connection.</param>
+    /// <summary>Starts a search with the configured time limit and an empty prompt history.</summary>
+    /// <param name="address">The remembered address, or null for one startup discovery scan.</param>
     /// <param name="reconnect">True for recovery of a lost session.</param>
     /// <returns>A task completing on connection, cancellation or timeout.</returns>
-    private async Task AutoConnectAsync(ulong address, bool reconnect)
+    private Task AutoConnectAsync(ulong? address, bool reconnect)
     {
+        var seconds = reconnect ? overlayOptions.ReconnectSeconds ?? 120 : overlayOptions.StartupSeconds ?? 0;
+        return RunAutomaticSearchAsync(new AutomaticSearch(
+            address, reconnect, seconds > 0 ? TimeSpan.FromSeconds(seconds) : null, new HashSet<ulong>()));
+    }
+
+    /// <summary>Runs automatic discovery until connection, cancellation or the search deadline.</summary>
+    /// <param name="search">The device, search type, remaining time and completed prompts.</param>
+    /// <returns>A task completing after Bluetooth resources have been released on cancellation.</returns>
+    private async Task RunAutomaticSearchAsync(AutomaticSearch search)
+    {
+        if (connected || busy || autoConnect != null) return;
+        var address = search.Address;
+        var reconnect = search.Reconnect;
+        var started = Stopwatch.GetTimestamp();
         using var stop = new CancellationTokenSource();
         using var deadline = new CancellationTokenSource();
-        var seconds = reconnect ? overlayOptions.ReconnectSeconds ?? 120 : overlayOptions.StartupSeconds ?? 0;
-        if (seconds > 0) deadline.CancelAfter(TimeSpan.FromSeconds(seconds));
+        if (search.Remaining is { } remaining)
+        {
+            if (remaining <= TimeSpan.Zero) deadline.Cancel();
+            else deadline.CancelAfter(remaining);
+        }
         reconnecting = reconnect;
         using var attempt = CancellationTokenSource.CreateLinkedTokenSource(stop.Token, deadline.Token);
         autoConnect = stop;
         busy = true;
         connectionState.Text = reconnect ? "正在重连" : "自动连接中";
-        dashboardMessage.Text = "正在搜索上次连接的设备。";
+        dashboardMessage.Text = address.HasValue ? "正在搜索上次连接的设备。" : "正在搜索附近的心率广播设备。";
         RefreshButtons();
         try
         {
@@ -254,17 +347,54 @@ public sealed partial class HeartRateWindow : Window
                 attempt.Token.ThrowIfCancellationRequested();
                 try
                 {
-                    var results = await BleHeartRateService.ScanAsync(attempt.Token, scanMilliseconds: 3000);
+                    var results = await BleHeartRateService.ScanAsync(attempt.Token,
+                        scanMilliseconds: address.HasValue ? 3000 : 8000);
                     var candidate = results.FirstOrDefault(item => item.Address == address);
-                    if (candidate != null)
+                    if (candidate == null)
                     {
-                        await SubscribeAsync(candidate, attempt.Token);
-                        return;
+                        foreach (var alternative in results.Where(item => item.HeartRate && !search.Offered.Contains(item.Address)))
+                        {
+                            var accepted = await ConfirmDeviceAsync(alternative, attempt.Token);
+                            search.Offered.Add(alternative.Address);
+                            if (!accepted) continue;
+                            candidate = alternative;
+                            break;
+                        }
                     }
+                    if (candidate == null)
+                    {
+                        if (!address.HasValue)
+                        {
+                            connectionState.Text = "未连接设备";
+                            dashboardMessage.Text = "可点击「连接设备」手动连接。";
+                            return;
+                        }
+
+                        // Only connect to a device discovered in this scan.
+                        dashboardMessage.Text = "正在搜索上次连接的设备。";
+                        await Task.Delay(250, attempt.Token);
+                        continue;
+                    }
+                    using var connection = CancellationTokenSource.CreateLinkedTokenSource(attempt.Token);
+                    connection.CancelAfter(TimeSpan.FromSeconds(15));
+                    dashboardMessage.Text = "正在连接设备并等待心率。";
+                    await SubscribeAsync(candidate, connection.Token, requireReading: true);
+                    return;
                 }
-                catch (Exception error) when (error is not OperationCanceledException)
+                catch (Exception error) when (!attempt.IsCancellationRequested || error is not OperationCanceledException)
                 {
                     ClearFailedAttempt();
+                    attempt.Token.ThrowIfCancellationRequested();
+                    var detail = error is OperationCanceledException or TimeoutException
+                        ? "未能及时建立连接或收到心率。"
+                        : error.Message;
+                    dashboardMessage.Text = "正在重试 · " + detail;
+                    if (!address.HasValue)
+                    {
+                        connectionState.Text = "未连接设备";
+                        dashboardMessage.Text = detail;
+                        return;
+                    }
                 }
                 await Task.Delay(250, attempt.Token);
             }
@@ -272,6 +402,16 @@ public sealed partial class HeartRateWindow : Window
         catch (OperationCanceledException)
         {
             ClearFailedAttempt();
+            if (manualScanHandoff != null && !closeRequested)
+            {
+                pausedSearch = search with { Remaining = search.Remaining - Stopwatch.GetElapsedTime(started) };
+                connectionState.Text = "自动连接已暂停";
+                dashboardMessage.Text = "返回主界面后继续搜索。";
+                toast.Visibility = Visibility.Collapsed;
+                overlay?.ShowNotice(null);
+                return;
+            }
+
             connectionState.Text = "已关闭自动连接";
             dashboardMessage.Text = "可点击「连接设备」手动连接。";
             if (!stop.IsCancellationRequested)
@@ -286,7 +426,29 @@ public sealed partial class HeartRateWindow : Window
         {
             autoConnect = null;
             reconnecting = false;
-            FinishOperation();
+            var handoff = manualScanHandoff;
+            manualScanHandoff = null;
+            // Keep picker controls disabled until the manual scan takes ownership.
+            if (handoff == null || closeRequested) FinishOperation();
+            handoff?.TrySetResult();
+        }
+    }
+
+    /// <summary>Asks before connecting to a different heart-rate broadcaster.</summary>
+    /// <param name="candidate">The discovered broadcaster.</param>
+    /// <param name="token">Cancels the prompt with the enclosing discovery session.</param>
+    /// <returns>True when the user explicitly accepts.</returns>
+    private async Task<bool> ConfirmDeviceAsync(BleHeartRateService.Candidate candidate, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        deviceDecision = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        deviceOfferText.Text = "是否连接「" + candidate + "」？";
+        deviceOffer.Visibility = Visibility.Visible;
+        try { return await deviceDecision.Task.WaitAsync(token); }
+        finally
+        {
+            deviceOffer.Visibility = Visibility.Collapsed;
+            deviceDecision = null;
         }
     }
 
@@ -417,7 +579,11 @@ public sealed partial class HeartRateWindow : Window
         captureToggle.Content = options.Capture ? "直播采集 · 开" : "直播采集";
         desktopToggle.Background = options.Enabled ? (System.Windows.Media.Brush)FindResource("OptionActiveBrush") : (System.Windows.Media.Brush)FindResource("OptionIdleBrush");
         captureToggle.Background = options.Capture ? (System.Windows.Media.Brush)FindResource("OptionActiveBrush") : (System.Windows.Media.Brush)FindResource("OptionIdleBrush");
-        if (autoConnect != null && !(reconnecting ? options.Reconnect : options.StartupConnect)) autoConnect.Cancel();
+        if (autoConnect != null && !(reconnecting ? options.Reconnect : options.StartupConnect))
+        {
+            autoConnect.Cancel();
+            RefreshButtons();
+        }
         if (!options.Enabled)
         {
             overlay?.Hide();

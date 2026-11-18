@@ -170,6 +170,20 @@
             </Grid>
         </Border>
 
+        <Border x:Name="deviceOffer" Panel.ZIndex="2" Visibility="Collapsed"
+                HorizontalAlignment="Center" VerticalAlignment="Center" Width="340" MaxWidth="340"
+                Padding="18" Background="White" BorderBrush="#9DBEE4" BorderThickness="1" CornerRadius="22">
+            <StackPanel>
+                <TextBlock Text="发现心率广播设备" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock x:Name="deviceOfferText" Margin="0,6,0,12" TextWrapping="Wrap"
+                           AutomationProperties.LiveSetting="Polite" />
+                <UniformGrid Columns="2">
+                    <Button x:Name="declineDevice" Content="暂不连接" Margin="0,0,4,0" />
+                    <Button x:Name="acceptDevice" Content="连接此设备" Background="#FBE0ED" Margin="4,0,0,0" />
+                </UniformGrid>
+            </StackPanel>
+        </Border>
+
         <Border x:Name="toast" Panel.ZIndex="1" Visibility="Collapsed" IsHitTestVisible="False"
                 HorizontalAlignment="Right" VerticalAlignment="Top" Padding="16,10" MaxWidth="290"
                 Background="#FBE0ED" BorderBrush="#EFC6DB" BorderThickness="1" CornerRadius="22">

@@ -92,6 +92,9 @@ internal sealed class BleHeartRateService : IDisposable
         finally
         {
             if (watcher.Status == BluetoothLEAdvertisementWatcherStatus.Started) watcher.Stop();
+            // Let Windows stop the cancelled watcher before another scan starts.
+            if (cancellationToken.IsCancellationRequested && watcher.Status == BluetoothLEAdvertisementWatcherStatus.Stopping)
+                await Task.WhenAny(stopped.Task, Task.Delay(500));
         }
     }
 
@@ -105,7 +108,8 @@ internal sealed class BleHeartRateService : IDisposable
         // Forward cancellation to Windows so the reconnect deadline also bounds GATT calls.
         Task<T> Await<T>(Windows.Foundation.IAsyncOperation<T> operation) => operation.AsTask(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
-        device = await Await(BluetoothLEDevice.FromBluetoothAddressAsync(candidate.Address, candidate.AddressType));
+        if (candidate.AddressType != BluetoothAddressType.Unspecified)
+            device = await Await(BluetoothLEDevice.FromBluetoothAddressAsync(candidate.Address, candidate.AddressType));
         if (device == null)
             device = await Await(BluetoothLEDevice.FromBluetoothAddressAsync(candidate.Address));
         if (device == null)
