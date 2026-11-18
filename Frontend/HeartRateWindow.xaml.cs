@@ -238,7 +238,8 @@ public sealed partial class HeartRateWindow : Window
     {
         using var stop = new CancellationTokenSource();
         using var deadline = new CancellationTokenSource();
-        if (reconnect) deadline.CancelAfter(TimeSpan.FromMinutes(2));
+        var seconds = reconnect ? overlayOptions.ReconnectSeconds ?? 120 : overlayOptions.StartupSeconds ?? 0;
+        if (seconds > 0) deadline.CancelAfter(TimeSpan.FromSeconds(seconds));
         reconnecting = reconnect;
         using var attempt = CancellationTokenSource.CreateLinkedTokenSource(stop.Token, deadline.Token);
         autoConnect = stop;

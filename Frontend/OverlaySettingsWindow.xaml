@@ -84,6 +84,102 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="DurationChoice" TargetType="ComboBox">
+            <Setter Property="Foreground" Value="#22354F" />
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton Focusable="False" ClickMode="Press"
+                                          IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="shell" Background="{StaticResource OptionIdleBrush}"
+                                                BorderBrush="Transparent" BorderThickness="1" CornerRadius="12" Padding="10,4">
+                                            <DockPanel>
+                                                <Path DockPanel.Dock="Right" Data="M 0,0 L 3,3 L 6,0" Stroke="#456382"
+                                                      StrokeThickness="1.4" VerticalAlignment="Center" Margin="5,0,0,0" />
+                                                <ContentPresenter VerticalAlignment="Center" />
+                                            </DockPanel>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="shell" Property="BorderBrush" Value="#9DBEE4" />
+                                            </Trigger>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="shell" Property="Background" Value="{StaticResource OptionActiveBrush}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                                <ContentPresenter Content="{TemplateBinding SelectionBoxItem}"
+                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" />
+                            </ToggleButton>
+                            <Popup x:Name="PART_Popup" Placement="Bottom" AllowsTransparency="True"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}">
+                                <Border Background="White" CornerRadius="12" Padding="4" Margin="0,4"
+                                        BorderBrush="#DDEEFF" BorderThickness="1"
+                                        MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+                                    <ScrollViewer CanContentScroll="True">
+                                        <ItemsPresenter />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ComboBoxItem">
+                                    <Border x:Name="item" Background="Transparent" CornerRadius="7" Padding="8,2" Margin="0,1">
+                                        <ContentPresenter />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsHighlighted" Value="True">
+                                            <Setter TargetName="item" Property="Background" Value="{StaticResource OptionIdleBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="item" Property="Background" Value="{StaticResource OptionActiveBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value=".45" /></Trigger></Style.Triggers>
+        </Style>
+        <Style x:Key="DurationInput" TargetType="TextBox">
+            <Setter Property="Foreground" Value="#22354F" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="field" Background="#EFF7FF" BorderBrush="Transparent" BorderThickness="1"
+                                CornerRadius="12" Padding="7,4">
+                            <ScrollViewer x:Name="PART_ContentHost" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="field" Property="BorderBrush" Value="#9DBEE4" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="field" Property="Background" Value="{StaticResource OptionActiveBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="field" Property="Opacity" Value=".45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
     <TabControl Margin="18" UseLayoutRounding="True">
         <TabControl.Template>
@@ -145,15 +241,39 @@
                 <StackPanel>
                     <DockPanel>
                         <Label DockPanel.Dock="Right" Style="{StaticResource HelpBadgeStyle}" AutomationProperties.Name="使用说明">
-                            <Label.ToolTip><ToolTip><TextBlock MaxWidth="270" TextWrapping="Wrap" Text="启动后持续搜索最近连接的设备，直到连上或手动取消。" /></ToolTip></Label.ToolTip>
+                            <Label.ToolTip><ToolTip><TextBlock MaxWidth="270" TextWrapping="Wrap" Text="启动后搜索最近连接的设备，直到连上、达到设定时长或手动取消。" /></ToolTip></Label.ToolTip>
                         </Label>
                         <CheckBox x:Name="startup" Content="应用启动时自动连接" />
                     </DockPanel>
+                    <DockPanel Margin="10,4,0,10" IsEnabled="{Binding IsChecked, ElementName=startup}">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <ComboBox x:Name="startupDuration" Style="{StaticResource DurationChoice}" MinWidth="88" AutomationProperties.Name="启动自动连接时长">
+                                <ComboBoxItem Content="不限时" />
+                                <ComboBoxItem Content="设置时限" />
+                            </ComboBox>
+                            <TextBox x:Name="startupSeconds" Style="{StaticResource DurationInput}" Width="62" Margin="6,0,0,0"
+                                     AutomationProperties.Name="启动自动连接时长（秒）" />
+                            <TextBlock x:Name="startupSecondsUnit" Text="秒" Margin="4,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Text="启动自动连接时长" VerticalAlignment="Center" Margin="0,0,10,0" />
+                    </DockPanel>
                     <DockPanel>
                         <Label DockPanel.Dock="Right" Style="{StaticResource HelpBadgeStyle}" AutomationProperties.Name="使用说明">
-                            <Label.ToolTip><ToolTip><TextBlock MaxWidth="270" TextWrapping="Wrap" Text="意外断连后尝试重连，最多持续 2 分钟。主动断开时不会重连。" /></ToolTip></Label.ToolTip>
+                            <Label.ToolTip><ToolTip><TextBlock MaxWidth="270" TextWrapping="Wrap" Text="意外断连后按设定时长尝试重连。主动断开时不会重连。" /></ToolTip></Label.ToolTip>
                         </Label>
                         <CheckBox x:Name="reconnect" Content="自动重连" />
+                    </DockPanel>
+                    <DockPanel Margin="10,4,0,10" IsEnabled="{Binding IsChecked, ElementName=reconnect}">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <ComboBox x:Name="reconnectDuration" Style="{StaticResource DurationChoice}" MinWidth="88" AutomationProperties.Name="自动重连时长">
+                                <ComboBoxItem Content="不限时" />
+                                <ComboBoxItem Content="设置时限" />
+                            </ComboBox>
+                            <TextBox x:Name="reconnectSeconds" Style="{StaticResource DurationInput}" Width="62" Margin="6,0,0,0"
+                                     AutomationProperties.Name="自动重连时长（秒）" />
+                            <TextBlock x:Name="reconnectSecondsUnit" Text="秒" Margin="4,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Text="自动重连时长" VerticalAlignment="Center" Margin="0,0,10,0" />
                     </DockPanel>
                 </StackPanel>
 
